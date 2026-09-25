@@ -23,6 +23,11 @@
 <!-- viewport fixe : on cible précisément l'écran 1024x768 de l'iPad 4 en paysage -->
 <meta name="viewport" content="width=1024, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>✦ Dashboard ✦</title>
+  
+  <!-- FORCE LE MODE KIOSQUE PLEIN ÉCRAN SUR IPAD 4 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Dashboard">
 
 <style>
 /* ==========================================================================
@@ -1179,5 +1184,24 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 </script>
+  
+  <script>
+  (function() {
+    if (("standalone" in window.navigator) && window.navigator.standalone) {
+      var noddy, remotes = false;
+      document.addEventListener('click', function(event) {
+        noddy = event.target;
+        while (noddy.nodeName !== "A" && noddy.nodeName !== "HTML") {
+          noddy = noddy.parentNode;
+        }
+        if ('href' in noddy && noddy.href.indexOf('http') !== -1 && (noddy.href.indexOf(document.location.host) !== -1 || remotes)) {
+          event.preventDefault();
+          document.location.href = noddy.href;
+        }
+      }, false);
+    }
+  })();
+</script>
+  
 </body>
 </html>
