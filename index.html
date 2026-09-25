@@ -298,18 +298,28 @@ html, body {
 .shopping-input input::placeholder { color: #C7C7CC; opacity: 0.45; }
 .shopping-input input:focus { border-color: rgba(255,255,255,0.4); }
 .btn-add {
+  position: relative;
   background: rgba(255,255,255,0.15);
   border: none;
   border-radius: 8px;
-  color: #fff;
-  font-size: 19px;
   width: 38px;
   height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-left: 8px;
+  flex: 0 0 auto;
 }
+/* Le "+" est dessiné avec deux barres en CSS pur plutôt qu'avec le
+   caractère texte "+", dont le rendu (métriques de police, baseline)
+   n'est jamais parfaitement centré sur tous les navigateurs — cette
+   méthode donne un centrage pixel-parfait, y compris sur iOS 10. */
+.btn-add::before, .btn-add::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: #fff;
+}
+.btn-add::before { width: 14px; height: 2px; margin: -1px 0 0 -7px; }
+.btn-add::after { width: 2px; height: 14px; margin: -7px 0 0 -1px; }
 .shopping-list {
   list-style: none;
   flex: 1 1 auto;
@@ -331,7 +341,12 @@ html, body {
 .shopping-status { flex: 0 0 auto; font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
 
 /* RADIOS */
-.audio-buttons { display: flex; flex-direction: row; flex-wrap: wrap; }
+.audio-buttons {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .radio-btn {
   border: 1px solid rgba(255,255,255,0.3);
   background: rgba(255,255,255,0.06);
@@ -339,27 +354,19 @@ html, body {
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 6px;
-  margin: 3px 5px 3px 0;
+  margin: 4px 5px;
 }
 .radio-btn.active { background: #FFFFFF; color: #000000; border-color: #FFFFFF; }
 .audio-status { font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
 
-/* SPOTIFY */
+/* SPOTIFY — lecteur intégré (plus de lien de secours externe) */
 .spotify-embed {
   display: block;
   width: 100%;
-  height: 152px;
+  height: 176px;
   margin-top: 6px;
   border: 0;
   border-radius: 10px;
-}
-.spotify-fallback {
-  display: block;
-  text-align: center;
-  margin-top: 6px;
-  font-size: 11px;
-  color: #9A9AA0;
-  text-decoration: none;
 }
 
 /* METRO */
@@ -455,7 +462,7 @@ html, body {
         <div class="widget-title"><span class="deco-star">✦</span> Liste de courses <span class="deco-star">✦</span></div>
         <div class="shopping-input">
           <input id="shop-input" type="text" placeholder="Ajouter un article…" maxlength="60">
-          <button class="btn-add" onclick="addItem()">+</button>
+          <button class="btn-add" onclick="addItem()" aria-label="Ajouter"></button>
         </div>
         <ul class="shopping-list" id="shop-list"></ul>
         <div class="shopping-status" id="shopping-status"></div>
@@ -482,13 +489,14 @@ html, body {
       <div class="widget spotify-box">
         <div class="widget-title"><span class="deco-star">✦</span> Spotify <span class="deco-star">✦</span></div>
         <!-- A CONFIGURER : remplacez l'ID de playlist par une playlist
-             PUBLIQUE (sinon l'iframe reste vide). Le lien de secours en
-             dessous ouvre la même playlist dans l'app Spotify. -->
+             PUBLIQUE (sinon l'iframe reste vide). Ce lecteur intégré
+             permet de lancer et contrôler la lecture directement depuis
+             le dashboard, sans quitter la page. -->
         <iframe class="spotify-embed"
-          src="https://open.spotify.com/playlist/6hMwxixqMwsbiLBqAly1GH?si=idhpu9GCSuucTymmECyefA"
-          width="100%" height="152" frameborder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-        <a class="spotify-fallback" href="https://open.spotify.com/playlist/1AT4NGzhEMyMJVxIc0tBAE" target="_blank" rel="noopener">Ouvrir dans Spotify ↗</a>
+          src="https://open.spotify.com/playlist/6hMwxixqMwsbiLBqAly1GH?si=zwbKGs_7TCeVlYey5eSYBw"
+          width="100%" height="176" frameborder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+          loading="eager"></iframe>
       </div>
 
       <div class="widget transport">
@@ -848,7 +856,22 @@ function renderAgenda(icsText) {
     var d = ev.start.date;
     var dayLabel = JOURS_ABBR[d.getDay()] + " " + d.getDate();
     var timeLabel = ev.start.allDay ? "Journée" : (pad2(d.getHours()) + ":" + pad2(d.getMinutes()));
-    var summary = ev.summary ? escapeHtml(ev.summary) : "(Sans titre)";
+    // NOTE : si le calendrier est partagé en "Voir uniquement la
+    // disponibilité", Google renvoie littéralement "Busy" à la place du
+    // vrai titre DANS LE FLUX .ICS LUI-MÊME, avant même que ce script ne
+    // le reçoive. Aucune logique de parsing ne peut donc récupérer un
+    // titre qui n'est jamais transmis — la seule vraie correction est le
+    // réglage de confidentialité du calendrier (voir l'explication
+    // fournie avec le code). On se contente ici de franciser l'affichage.
+    var rawSummary = ev.summary ? ev.summary.replace(/^\s+|\s+$/g, "") : "";
+    var summary;
+    if (!rawSummary) {
+      summary = "(Sans titre)";
+    } else if (rawSummary.toLowerCase() === "busy") {
+      summary = "Occupé <span style=\"opacity:0.5;font-size:11px;\">(détails masqués)</span>";
+    } else {
+      summary = escapeHtml(rawSummary);
+    }
     html += '<li><span class="agenda-day">' + dayLabel + '</span>' +
       '<span class="agenda-time">' + timeLabel + '</span>' +
       summary + '</li>';
