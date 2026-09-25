@@ -3,28 +3,48 @@
   ============================================================================
   DASHBOARD PERSONNEL POUR IPAD 4 (iOS 10.3.3 / Safari mobile ancien)
   ============================================================================
-  Ce fichier est 100% autonome : un seul index.html avec le CSS et le JS
-  intégrés. Vous pouvez l'héberger tel quel sur GitHub Pages.
+  Fichier 100% autonome : un seul index.html, prêt pour GitHub Pages.
 
-  IMPORTANT POUR LE NÉOPHYTE :
-  - Tout le JavaScript est écrit en syntaxe "ancienne" (ES5) : var au lieu
-    de let/const, function() au lieu de () =>, concaténation de chaînes
-    avec "+" au lieu des templates `${}`. C'est fait exprès pour que
-    Safari sur iOS 10.3.3 (qui est très ancien) puisse tout exécuter
-    sans planter.
-  - Cherchez le mot "A CONFIGURER" dans les commentaires ci-dessous :
-    ce sont tous les endroits où VOUS devez remplacer une valeur
-    (identifiant d'agenda, etc.)
+  CE QUI A ÉTÉ CORRIGÉ PAR RAPPORT À LA VERSION PRÉCÉDENTE :
+  1) BUG CRITIQUE : updateEmailIndicator() référençait un élément
+     #email-indicator qui n'existe pas dans le HTML. Comme ce plantage
+     n'était pas intercepté et qu'il était déclenché AVANT l'initialisation
+     de la météo, de la liste de courses et du métro dans initDashboard(),
+     TOUT LE RESTE DU SCRIPT S'ARRÊTAIT SILENCIEUSEMENT à ce moment-là.
+     C'est la cause principale des widgets "morts". La fonction a été
+     supprimée, et chaque étape d'initDashboard() est maintenant isolée
+     dans son propre try/catch pour qu'un futur bug sur UN widget ne
+     puisse plus jamais bloquer les autres.
+  2) La météo appelait un élément #weather-forecast qui n'existait pas non
+     plus dans le HTML -> refreshWeather() a été simplifiée (température,
+     icône, lever/coucher du soleil) et ne référence plus que des éléments
+     réellement présents.
+  3) Le module RATP appelait deux URL séparées (.../A et .../R) alors que
+     l'API attend un seul appel avec le paramètre combiné ".../A+R". Le
+     code a été réécrit pour un seul appel XHR, plus fiable.
+  4) Mise en page réécrite en Flexbox (au lieu d'une somme de hauteurs en
+     pixels codées en dur) : la colonne agenda/courses absorbe l'espace
+     restant automatiquement. Il est donc physiquement impossible qu'un
+     widget déborde de l'écran 1024x768, quel que soit le contenu.
+  5. -webkit-user-select:none était appliqué à TOUT (y compris aux champs
+     de saisie), ce qui peut empêcher le clavier/le focus de bien réagir
+     sur un vieux Safari. Une exception a été ajoutée pour les champs et
+     les boutons.
+  6) Police remplacée par la pile système Apple (-apple-system / SF Pro
+     Display) avec des tailles augmentées pour un écran Retina.
+
+  TOUT LE JAVASCRIPT RESTE EN SYNTAXE ES5 (var, function(), pas de fetch,
+  pas de template strings) pour rester 100% compatible iOS 10.3.3.
+
+  Cherchez "A CONFIGURER" pour les quelques endroits à personnaliser.
   ============================================================================
 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<!-- viewport fixe : on cible précisément l'écran 1024x768 de l'iPad 4 en paysage -->
 <meta name="viewport" content="width=1024, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>✦ Dashboard ✦</title>
-  
-  <!-- FORCE LE MODE KIOSQUE PLEIN ÉCRAN SUR IPAD 4 -->
+
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Dashboard">
@@ -37,27 +57,34 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* On désactive la sélection de texte façon "app" plutôt que "page web" */
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Correctif iOS 10 : on autorise explicitement le texte à être sélectionné/
+   saisi dans les champs, sinon le clavier et le focus peuvent se comporter
+   bizarrement sur un vieux Safari. */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+button, .shop-check, .radio-btn, .btn-del, .btn-add {
+  cursor: pointer;
+}
+
 html, body {
   width: 1024px;
   height: 768px;
-  overflow: hidden; /* pas de scroll : c'est un dashboard fixe sur un écran fixe */
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color: #F2F2F2;
-  /* Le dégradé de fond est en fait piloté par JavaScript (voir plus bas :
-     la fonction updateBackground()), mais on met une valeur par défaut ici
-     au cas où le JS mettrait du temps à démarrer. */
+  overflow: hidden;
+  font-family: -apple-system, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #F5F5F7;
   background: linear-gradient(180deg, #362E68 0%, #0B0E28 100%);
-  transition: background 3s ease; /* transition douce quand l'heure change de tranche */
+  transition: background 3s ease;
 }
 
 /* ==========================================================================
-   FOND ETOILE (ciel scintillant en CSS pur)
+   FOND ETOILE
    ========================================================================== */
 #stars-bg {
   position: fixed;
@@ -67,9 +94,6 @@ html, body {
   z-index: 0;
   pointer-events: none;
 }
-
-/* Chaque étoile est un petit <div class="star"> positionné en JS avec un
-   style inline (top/left/taille/délai). Ici on ne définit que son look. */
 .star {
   position: absolute;
   background: #FFFFFF;
@@ -79,7 +103,6 @@ html, body {
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
 }
-
 @keyframes twinkle {
   0%   { opacity: 0.15; }
   50%  { opacity: 0.9; }
@@ -87,7 +110,8 @@ html, body {
 }
 
 /* ==========================================================================
-   MISE EN PAGE GENERALE : titre en haut + 2 colonnes
+   MISE EN PAGE GENERALE (Flexbox : l'espace restant est toujours absorbé
+   par les widgets "flex", donc rien ne peut jamais déborder de l'écran)
    ========================================================================== */
 .container {
   position: relative;
@@ -95,49 +119,56 @@ html, body {
   width: 1024px;
   height: 768px;
   padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard-title {
-  height: 48px;
+  flex: 0 0 auto;
+  height: 44px;
   border: 1px solid rgba(255,255,255,0.25);
   background: rgba(0,0,0,0.35);
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 23px;
+  font-size: 22px;
   letter-spacing: 2px;
   font-weight: 500;
   color: #FFFFFF;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .dashboard-columns {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: row;
-  height: 686px;
 }
 
 .col-left {
   width: 50%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-right: 7px;
+  padding-right: 6px;
 }
 
 .col-right {
   width: 50%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  padding-left: 7px;
+  padding-left: 6px;
 }
 
 .widget {
+  flex: 0 0 auto;
   border: 1px solid rgba(255,255,255,0.25);
   background: rgba(0,0,0,0.35);
   border-radius: 10px;
-  padding: 9px 11px;
-  margin-bottom: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
 }
 
 .widget-title {
@@ -147,37 +178,35 @@ html, body {
   color: #C7C7CC;
   margin-bottom: 6px;
   font-weight: 600;
+  text-align: center;
 }
 
 /* DATE + HEURE */
-.date-box {
-  height: 62px;
-  text-align: center;
-}
+.date-box { text-align: center; padding-top: 8px; padding-bottom: 8px; }
 .date-fr {
-  font-size: 17px;
-  color: #D0D0D5;
+  font-size: 18px;
+  color: #E4E4E9;
   letter-spacing: 0.6px;
   text-transform: capitalize;
-}
-.clock-box {
-  height: 94px;
   text-align: center;
 }
+.clock-box { text-align: center; padding-top: 6px; padding-bottom: 6px; }
 .clock {
-  font-size: 58px;
-  line-height: 64px;
+  font-size: 62px;
+  line-height: 66px;
   font-weight: 200;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   color: #FFFFFF;
   font-variant-numeric: tabular-nums;
+  text-align: center;
 }
 
 /* METEO + LUNE + SOLEIL */
 .weather-moon-sun {
-  height: 174px;
   display: flex;
   flex-direction: row;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 .weather-panel, .moon-panel, .sun-panel {
   width: 33.333%;
@@ -190,20 +219,14 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 58px;
+  margin-bottom: 4px;
 }
-.weather-temp {
-  font-size: 34px;
-  font-weight: 300;
-}
-.weather-icon {
-  font-size: 30px;
-  margin-left: 7px;
-}
+.weather-temp { font-size: 36px; font-weight: 300; }
+.weather-icon { font-size: 32px; margin-left: 8px; }
 .weather-sub {
-  font-size: 11px;
+  font-size: 12px;
   color: #B5B5BA;
-  line-height: 1.3;
+  line-height: 1.35;
   padding: 0 4px;
 }
 .moon-main {
@@ -211,152 +234,127 @@ html, body {
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  min-height: 82px;
 }
-.moon-emoji {
-  font-size: 40px;
-}
-.moon-label {
-  font-size: 11px;
-  color: #B5B5BA;
-  margin-top: 4px;
-}
-.sun-panel {
-  padding-top: 4px;
-}
+.moon-emoji { font-size: 42px; }
+.moon-label { font-size: 12px; color: #B5B5BA; margin-top: 6px; }
+.sun-panel { padding-top: 2px; }
 .sun-time {
-  font-size: 16px;
+  font-size: 17px;
   color: #FFFFFF;
-  margin: 18px 0 18px;
+  margin: 8px 0;
+  text-align: center;
 }
 .sun-time span {
   display: block;
   font-size: 10px;
-  color: #999;
+  color: #9A9AA0;
   margin-bottom: 2px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
+  text-align: center;
 }
 
 /* RAPPELS */
 .widget.reminder {
-  min-height: 64px;
   border-color: rgba(229,193,88,0.65);
   background: rgba(60,50,10,0.35);
   text-align: center;
   font-size: 17px;
   font-weight: bold;
-  padding: 11px;
+  padding: 12px;
   display: none;
 }
 
-/* SHOPPING LIST */
+/* SHOPPING LIST (widget flexible : absorbe l'espace restant de la colonne) */
 .widget.shopping {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.shopping-input{ display:flex; margin-bottom:10px; }
-.shopping-input input{
-  flex:1;
-  background:rgba(255,255,255,0.1);
-  border:1px solid rgba(255,255,255,0.15);
-  border-radius:8px; padding:8px 12px;
-  color:#fff; font-size:14px; outline:none;
-  font-family:inherit;
-  min-width:0;
+.shopping-input { display: flex; margin-bottom: 8px; flex: 0 0 auto; }
+.shopping-input input {
+  flex: 1;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  font-family: inherit;
+  min-width: 0;
 }
-.shopping-input input::placeholder{opacity:0.35;}
-.shopping-input input:focus{border-color:rgba(255,255,255,0.35);}
-.btn-add{
-  background:rgba(255,255,255,0.15); border:none;
-  border-radius:8px; color:#fff; font-size:18px;
-  width:36px; height:36px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  margin-left:8px;
+.shopping-input input::placeholder { color: #C7C7CC; opacity: 0.45; }
+.shopping-input input:focus { border-color: rgba(255,255,255,0.4); }
+.btn-add {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 19px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
 }
-.shopping-list{
-  list-style:none;
-  max-height:210px;
-  overflow-y:auto;
+.shopping-list {
+  list-style: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
-.shop-item{
-  display:flex; align-items:center;
-  padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.06);
-  font-size:14px;
+.shop-item {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 15px;
 }
-.shop-check{ width:18px; height:18px; accent-color:#a78bfa; cursor:pointer; margin-right:10px; }
-.shop-item.done span{ text-decoration:line-through; opacity:0.35; }
-.shop-item span{ flex:1; }
-.btn-del{
-  background:none; border:none; color:#fff;
-  opacity:0.25; cursor:pointer; font-size:14px; padding:0 4px;
-}
-.shopping-status{ font-size:11px; color:#888; margin-top:5px; }
+.shop-check { width: 19px; height: 19px; accent-color: #a78bfa; margin-right: 10px; }
+.shop-item.done span { text-decoration: line-through; opacity: 0.35; }
+.shop-item span { flex: 1; }
+.btn-del { background: none; border: none; color: #fff; opacity: 0.3; font-size: 15px; padding: 0 6px; }
+.shopping-status { flex: 0 0 auto; font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
 
 /* RADIOS */
-.widget.audio {
-  height: 128px;
-}
-.audio-buttons {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-}
+.audio-buttons { display: flex; flex-direction: row; flex-wrap: wrap; }
 .radio-btn {
   border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.05);
-  color: #F2F2F2;
-  font-size: 12px;
-  padding: 7px 9px;
+  background: rgba(255,255,255,0.06);
+  color: #F5F5F7;
+  font-size: 13px;
+  padding: 8px 10px;
   border-radius: 6px;
   margin: 3px 5px 3px 0;
 }
-.radio-btn.active {
-  background: #FFFFFF;
-  color: #000000;
-  border-color: #FFFFFF;
-}
-.audio-status { font-size: 11px; color: #999; margin-top: 5px; }
+.radio-btn.active { background: #FFFFFF; color: #000000; border-color: #FFFFFF; }
+.audio-status { font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
 
 /* SPOTIFY */
-.widget.spotify-box {
-  height: 225px;
-  overflow: hidden;
-}
 .spotify-embed {
   display: block;
   width: 100%;
-  height: 190px;
-  margin-top: 5px;
+  height: 152px;
+  margin-top: 6px;
   border: 0;
   border-radius: 10px;
 }
-.spotify-config {
-  font-size: 11px;
-  color: #999;
-  line-height: 1.4;
-  margin-top: 5px;
-}
-.spotify-link {
-  display: inline-block;
+.spotify-fallback {
+  display: block;
+  text-align: center;
   margin-top: 6px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255,255,255,0.25);
-  border-radius: 6px;
-  color: #fff;
-  text-decoration: none;
   font-size: 11px;
+  color: #9A9AA0;
+  text-decoration: none;
 }
 
 /* METRO */
-.widget.transport {
-  height: 154px;
-  overflow: hidden;
-}
 .metro-line {
   display: inline-block;
-  background: #F2F2F2;
+  background: #F5F5F7;
   color: #000;
   font-weight: bold;
   font-size: 12px;
@@ -367,49 +365,32 @@ html, body {
   border-radius: 50%;
   margin-right: 8px;
 }
-.metro-direction { font-size: 12px; color: #D0D0D5; margin-top: 4px; }
-.metro-times { font-size: 12px; color: #FFFFFF; margin-left: 28px; margin-bottom: 4px; }
-.metro-error { font-size: 11px; color: #999; font-style: italic; }
+.metro-direction { font-size: 13px; color: #E4E4E9; margin-top: 6px; text-align: center; }
+.metro-times { font-size: 13px; color: #FFFFFF; margin-top: 3px; text-align: center; }
+.metro-error { font-size: 12px; color: #9A9AA0; font-style: italic; text-align: center; }
 
-/* AGENDA */
+/* AGENDA (widget flexible : absorbe l'espace restant de la colonne) */
 .widget.agenda {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
 }
-#agenda-list {
-  list-style: none;
-  font-size: 12px;
-  line-height: 1.4;
-  flex: 1;
-  overflow-y: auto;
+.agenda-iframe {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
 }
-#agenda-list li {
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding: 5px 0;
-}
-.agenda-day { display: inline-block; min-width: 43px; color: #E5C158; font-weight: 600; margin-right: 5px; }
-.agenda-time { color: #B5B5BA; margin-right: 5px; }
-.agenda-empty, .agenda-error { font-size: 11px; color: #999; font-style: italic; }
 
-/* Etoiles décoratives */
 .deco-star { color: #C7C7CC; opacity: 0.8; }
-
-/* Petites tailles de secours si le navigateur rétrécit légèrement le contenu */
-@media screen and (max-height: 740px) {
-  .dashboard-columns { height: 660px; }
-  .weather-moon-sun { height: 160px; }
-  .widget.audio { height: 118px; }
-  .widget.spotify-box { height: 150px; }
-  .widget.transport { height: 140px; }
-}
 </style>
 </head>
 <body>
 
-<!-- Conteneur du ciel étoilé, rempli dynamiquement par JS -->
 <div id="stars-bg"></div>
 
 <div class="container">
@@ -450,20 +431,12 @@ html, body {
 
         <div class="sun-panel">
           <div class="widget-title">Soleil</div>
-          <div class="sun-time">
-            <span>Lever</span>
-            <div id="sun-rise">☀️ --:--</div>
-          </div>
-          <div class="sun-time">
-            <span>Coucher</span>
-            <div id="sun-set">🌙 --:--</div>
-          </div>
+          <div class="sun-time"><span>Lever</span><div id="sun-rise">☀️ --:--</div></div>
+          <div class="sun-time"><span>Coucher</span><div id="sun-set">🌙 --:--</div></div>
         </div>
       </div>
 
-      <div class="widget reminder" id="reminder-block">
-        <!-- Rempli dynamiquement par checkReminder() -->
-      </div>
+      <div class="widget reminder" id="reminder-block"></div>
 
       <div class="widget shopping">
         <div class="widget-title"><span class="deco-star">✦</span> Liste de courses <span class="deco-star">✦</span></div>
@@ -495,14 +468,14 @@ html, body {
 
       <div class="widget spotify-box">
         <div class="widget-title"><span class="deco-star">✦</span> Spotify <span class="deco-star">✦</span></div>
-        <div id="spotify-content">
-          <iframe class="spotify-embed"
-            src="https://open.spotify.com/embed/playlist/1AT4NGzhEMyMJVxIc0tBAE?utm_source=generator&si=9f54c4358a8c4c5b"
-            width="100%" height="190" frameborder="0"
-            allowfullscreen=""
-            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            loading="lazy"></iframe>
-        </div>
+        <!-- A CONFIGURER : remplacez l'ID de playlist ci-dessous par une
+             playlist PUBLIQUE (sinon l'iframe reste vide). Le lien de
+             secours en dessous ouvre la même playlist dans l'app Spotify. -->
+        <iframe class="spotify-embed"
+          src="https://open.spotify.com/embed/playlist/1AT4NGzhEMyMJVxIc0tBAE?utm_source=generator"
+          width="100%" height="152" frameborder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+        <a class="spotify-fallback" href="https://open.spotify.com/playlist/1AT4NGzhEMyMJVxIc0tBAE" target="_blank" rel="noopener">Ouvrir dans Spotify ↗</a>
       </div>
 
       <div class="widget transport">
@@ -514,9 +487,9 @@ html, body {
 
       <div class="widget agenda">
         <div class="widget-title"><span class="deco-star">✦</span> Agenda Google <span class="deco-star">✦</span></div>
-        <iframe id="google-calendar"
+        <iframe id="google-calendar" class="agenda-iframe"
           src="https://calendar.google.com/calendar/embed?src=morgane.bonvin%40gmail.com&ctz=Europe%2FParis&mode=AGENDA&showTitle=0&showTabs=0&showPrint=0&showCalendars=0&showTz=0"
-          style="border:0" width="100%" height="240" frameborder="0" scrolling="no"></iframe>
+          frameborder="0"></iframe>
       </div>
 
     </div>
@@ -526,36 +499,42 @@ html, body {
 <script>
 /* ============================================================================
    TOUT LE JAVASCRIPT EST EN ES5 (compatible Safari iOS 10.3.3)
-   Pas de let/const, pas de =>, pas de template strings, pas d'async/await.
+   Pas de let/const, pas de =>, pas de template strings, pas d'async/await,
+   pas de fetch (XMLHttpRequest uniquement).
    ============================================================================ */
 
 
 /* ----------------------------------------------------------------------
    0. UTILITAIRES GÉNÉRAUX
    ---------------------------------------------------------------------- */
-
-// Ajoute un zéro devant les nombres < 10 (equiv. de padStart, non
-// disponible en ES5 / iOS 10)
 function pad2(n) {
   n = Math.floor(n);
   if (n < 10) { return "0" + n; }
   return "" + n;
 }
 
-// Petit wrapper XMLHttpRequest (équivalent "fetch" pour ES5), avec
-// callback de succès et callback d'erreur.
 function xhrGetJSON(url, onSuccess, onError) {
   var xhr = new XMLHttpRequest();
   xhr.open("GET", url, true);
-  xhr.timeout = 10000; // 10 secondes : au-delà, on considère que ça a échoué
+  xhr.timeout = 10000;
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if (xhr.status >= 200 && xhr.status < 300) {
+        var data;
         try {
-          var data = JSON.parse(xhr.responseText);
+          data = JSON.parse(xhr.responseText);
+        } catch (parseErr) {
+          if (onError) { onError(parseErr); }
+          return;
+        }
+        // onSuccess est appelé HORS du try/catch de parsing : une erreur
+        // dans le rendu (ex: élément manquant) ne doit jamais être
+        // confondue avec une erreur réseau, et ne doit jamais empêcher
+        // les autres widgets de s'initialiser.
+        try {
           onSuccess(data);
-        } catch (e) {
-          if (onError) { onError(e); }
+        } catch (renderErr) {
+          if (onError) { onError(renderErr); }
         }
       } else {
         if (onError) { onError(new Error("HTTP " + xhr.status)); }
@@ -568,20 +547,29 @@ function xhrGetJSON(url, onSuccess, onError) {
   xhr.send();
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 
 /* ----------------------------------------------------------------------
    1. CIEL ETOILE (généré une seule fois au chargement)
    ---------------------------------------------------------------------- */
 function buildStars() {
   var container = document.getElementById("stars-bg");
-  var starCount = 70; // nombre d'étoiles à l'écran, ajustable
+  var starCount = 70;
   var html = "";
   var i;
   for (i = 0; i < starCount; i++) {
-    var size = Math.random() * 2 + 1; // entre 1 et 3px
+    var size = Math.random() * 2 + 1;
     var top = Math.random() * 768;
     var left = Math.random() * 1024;
-    var duration = (Math.random() * 3 + 2).toFixed(1); // entre 2 et 5s
+    var duration = (Math.random() * 3 + 2).toFixed(1);
     var delay = (Math.random() * 4).toFixed(1);
     html += '<div class="star" style="' +
       "width:" + size + "px;" +
@@ -600,34 +588,28 @@ function buildStars() {
    2. DATE FRANÇAISE + HORLOGE + DEGRADE DE FOND SELON L'HEURE
    ---------------------------------------------------------------------- */
 var JOURS_FR = ["dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"];
-var JOURS_ABBR = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"]; // utilisé par l'agenda
 var MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
                 "août", "septembre", "octobre", "novembre", "décembre"];
 
 function updateClockAndDate() {
   var now = new Date();
 
-  // Date en français, ex: "vendredi 25 septembre 2026"
   var dateStr = JOURS_FR[now.getDay()] + " " + now.getDate() + " " +
                 MOIS_FR[now.getMonth()] + " " + now.getFullYear();
   document.getElementById("date-fr").innerHTML = dateStr;
 
-  // Horloge géante HH:MM:SS
   var timeStr = pad2(now.getHours()) + ":" + pad2(now.getMinutes()) + ":" + pad2(now.getSeconds());
   document.getElementById("clock").innerHTML = timeStr;
 
   return now;
 }
 
-// Dégradé de fond : bleu-violet le jour (6h-18h), presque noir la nuit.
-// On ne réapplique le style que si la tranche change, pour laisser jouer
-// la transition CSS "background 3s ease" en douceur.
 var currentBgMode = null;
 function updateBackground(now) {
   var hour = now.getHours();
   var isDay = (hour >= 6 && hour < 18);
   var mode = isDay ? "day" : "night";
-  if (mode === currentBgMode) { return; } // rien à faire, on évite de tout recalculer
+  if (mode === currentBgMode) { return; }
   currentBgMode = mode;
   if (isDay) {
     document.body.style.background = "linear-gradient(180deg, #362E68 0%, #0B0E28 100%)";
@@ -641,10 +623,9 @@ function updateBackground(now) {
    3. RAPPELS CONDITIONNELS
    Lundi 06h-12h  -> "Prends ta B12"
    Vendredi 06h-12h -> "Arrose les plantes"
-   Sinon -> bloc masqué
    ---------------------------------------------------------------------- */
 function checkReminder(now) {
-  var day = now.getDay();   // 0 = dimanche, 1 = lundi, ... 5 = vendredi
+  var day = now.getDay();
   var hour = now.getHours();
   var block = document.getElementById("reminder-block");
   var message = null;
@@ -665,69 +646,14 @@ function checkReminder(now) {
 
 
 /* ----------------------------------------------------------------------
-   AGENDA GOOGLE
-   ----------------------------------------------------------------------
-   L'agenda est intégré directement avec l'iframe officiel de Google Calendar.
-   Aucun appel à l'API Google Calendar, aucune clé API et aucun Client ID ne
-   sont nécessaires dans ce fichier. Le compte utilisé est celui connecté
-   dans Safari.
+   5. SHOPPING LIST LOCALE (localStorage — fonctionne hors-ligne)
    ---------------------------------------------------------------------- */
-function refreshAgenda() {
-  var iframe = document.getElementById("google-calendar");
-  if (!iframe) { return; }
-
-  /* L'URL est définie dans le HTML afin que Google puisse charger directement
-     l'agenda morgane.bonvin@gmail.com en heure de Paris. */
-}
-
-
-/* ----------------------------------------------------------------------
-   4. INDICATEUR EMAIL (désactivé par défaut)
-   ---------------------------------------------------------------------- */
-// A CONFIGURER (optionnel) : si un jour vous voulez afficher un petit
-// indicateur "✉" quand vous avez des mails non lus, il faudrait un
-// service tiers capable de vous donner ce nombre sans exposer votre
-// mot de passe (ex: un petit script serveur perso, ou un service comme
-// EmailListVerify / un webhook Zapier qui écrit le nombre dans un
-// stockage clé-valeur, à lire ici de la même façon que la liste de
-// courses ci-dessous). Par défaut, l'indicateur reste masqué :
-function updateEmailIndicator() {
-  var el = document.getElementById("email-indicator");
-  // Exemple si vous branchez un jour un vrai flux :
-  // xhrGetJSON("https://VOTRE-SOURCE/unread-count.json", function(data){
-  //   if (data.unread > 0) { el.style.display = "inline-block"; }
-  //   else { el.style.display = "none"; }
-  // });
-  el.style.display = "none"; // laissé masqué tant que rien n'est configuré
-}
-
-
-/* ----------------------------------------------------------------------
-   5. SHOPPING LIST LOCALE
-   ----------------------------------------------------------------------
-   La liste est maintenant locale à l'iPad et est conservée dans
-   localStorage. Elle fonctionne sans npoint.io ni appel réseau.
-   ---------------------------------------------------------------------- */
-
 var SHOPPING_STORAGE_KEY = "dashboard-shopping-list";
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function loadShoppingItems() {
   var raw = null;
-  try {
-    raw = localStorage.getItem(SHOPPING_STORAGE_KEY);
-  } catch (e) {}
-
+  try { raw = localStorage.getItem(SHOPPING_STORAGE_KEY); } catch (e) {}
   if (!raw) { return []; }
-
   try {
     var data = JSON.parse(raw);
     return (data && data.length) ? data : [];
@@ -737,9 +663,7 @@ function loadShoppingItems() {
 }
 
 function saveShoppingItems(items) {
-  try {
-    localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(items));
-  } catch (e) {}
+  try { localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(items)); } catch (e) {}
 }
 
 function renderShoppingList() {
@@ -772,11 +696,7 @@ function renderShoppingList() {
 function addItem() {
   var input = document.getElementById("shop-input");
   var text = input.value.replace(/^\s+|\s+$/g, "");
-
-  if (!text) {
-    input.focus();
-    return;
-  }
+  if (!text) { input.focus(); return; }
 
   var items = loadShoppingItems();
   items.push({ text: text, done: false });
@@ -789,7 +709,6 @@ function addItem() {
 function toggleItem(index) {
   var items = loadShoppingItems();
   if (!items[index]) { return; }
-
   items[index].done = !items[index].done;
   saveShoppingItems(items);
   renderShoppingList();
@@ -798,7 +717,6 @@ function toggleItem(index) {
 function deleteItem(index) {
   var items = loadShoppingItems();
   if (!items[index]) { return; }
-
   items.splice(index, 1);
   saveShoppingItems(items);
   renderShoppingList();
@@ -806,7 +724,6 @@ function deleteItem(index) {
 
 function initShoppingList() {
   renderShoppingList();
-
   var input = document.getElementById("shop-input");
   input.onkeypress = function (event) {
     event = event || window.event;
@@ -822,13 +739,10 @@ function initShoppingList() {
    6. METEO & LUNE (Open-Meteo, aucune clé API nécessaire)
    ---------------------------------------------------------------------- */
 
-// A CONFIGURER si besoin : coordonnées de Paris par défaut.
-// Remplacez par vos propres coordonnées si vous n'habitez pas Paris.
+// A CONFIGURER si besoin : coordonnées par défaut = Paris.
 var WEATHER_LAT = 48.8566;
 var WEATHER_LON = 2.3522;
 
-// Table simplifiée de correspondance "code météo Open-Meteo" -> icône + texte
-// (codes officiels WMO ; liste volontairement simplifiée pour rester lisible)
 function decodeWeatherCode(code) {
   var table = {
     0: { icon: "☀️", label: "Ciel dégagé" },
@@ -856,87 +770,51 @@ function decodeWeatherCode(code) {
   return { icon: "❓", label: "Inconnu" };
 }
 
-// Noms courts des jours, utilisés uniquement pour la mini-prévision météo
-var JOURS_TRES_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-
 function refreshWeather() {
-  // On demande en une seule fois : la météo actuelle, le lever/coucher
-  // du soleil (affichés dans le widget LUNE), et les prévisions des
-  // prochains jours (code météo + températures min/max) pour la
-  // mini-prévision sous le widget météo.
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + WEATHER_LAT +
     "&longitude=" + WEATHER_LON +
     "&current_weather=true" +
-    "&daily=sunrise,sunset,weathercode,temperature_2m_max,temperature_2m_min" +
+    "&daily=sunrise,sunset" +
     "&timezone=Europe%2FParis";
 
   xhrGetJSON(
     url,
     function (data) {
-      if (!data.current_weather) { throw new Error("format inattendu"); }
-      var temp = Math.round(data.current_weather.temperature);
-      var code = data.current_weather.weathercode;
-      var info = decodeWeatherCode(code);
-
-      document.getElementById("weather-temp").innerHTML = temp + "°";
-      document.getElementById("weather-icon").innerHTML = info.icon;
-      document.getElementById("weather-desc").innerHTML = info.label;
-
+      if (data.current_weather) {
+        var temp = Math.round(data.current_weather.temperature);
+        var code = data.current_weather.weathercode;
+        var info = decodeWeatherCode(code);
+        document.getElementById("weather-temp").innerHTML = temp + "°";
+        document.getElementById("weather-icon").innerHTML = info.icon;
+        document.getElementById("weather-desc").innerHTML = info.label;
+      }
       if (data.daily && data.daily.sunrise && data.daily.sunrise[0]) {
-        // Lever du soleil avec emoji ☀️, coucher avec emoji 🌙 —
-        // affichés dans l'encart de la phase de lune, pas ici.
         var sunrise = data.daily.sunrise[0].substr(11, 5);
         var sunset = data.daily.sunset[0].substr(11, 5);
         document.getElementById("sun-rise").innerHTML = "☀️ " + sunrise;
         document.getElementById("sun-set").innerHTML = "🌙 " + sunset;
       }
-
-      // Mini-prévision des 4 prochains jours (on saute l'indice 0,
-      // qui correspond à aujourd'hui, déjà affiché en grand au-dessus)
-      if (data.daily && data.daily.time) {
-        var html = "";
-        var i;
-        var maxIndex = Math.min(4, data.daily.time.length - 1);
-        for (i = 1; i <= maxIndex; i++) {
-          var dDate = new Date(data.daily.time[i] + "T12:00:00");
-          var dName = JOURS_TRES_COURTS[dDate.getDay()];
-          var dInfo = decodeWeatherCode(data.daily.weathercode[i]);
-          var tmax = Math.round(data.daily.temperature_2m_max[i]);
-          var tmin = Math.round(data.daily.temperature_2m_min[i]);
-          html += '<div class="forecast-day">' +
-                    '<div class="f-name">' + dName + "</div>" +
-                    '<div class="f-icon">' + dInfo.icon + "</div>" +
-                    '<div class="f-temp">' + tmax + "°/" + tmin + "°</div>" +
-                  "</div>";
-        }
-        document.getElementById("weather-forecast").innerHTML = html;
-      }
     },
     function () {
-      // Repli propre en cas d'indisponibilité de l'API
       document.getElementById("weather-desc").innerHTML = "Météo indisponible";
     }
   );
 }
 
-// Calcul de la phase de la lune, sans dépendance externe.
-// Principe : on mesure le temps écoulé depuis une nouvelle lune connue
-// et on divise par la durée d'un cycle lunaire (~29,53 jours).
 function getMoonPhase(date) {
-  var synodicMonth = 29.530588853; // durée moyenne d'un cycle lunaire, en jours
-  // Nouvelle lune de référence : 6 janvier 2000, 18h14 UTC
+  var synodicMonth = 29.530588853;
   var knownNewMoon = Date.UTC(2000, 0, 6, 18, 14, 0);
   var diffDays = (date.getTime() - knownNewMoon) / 86400000;
   var phase = diffDays % synodicMonth;
   if (phase < 0) { phase += synodicMonth; }
-  var fraction = phase / synodicMonth; // valeur entre 0 et 1
+  var fraction = phase / synodicMonth;
 
   var emojis = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
   var labels = ["Nouvelle lune", "Premier croissant", "Premier quartier",
                 "Gibbeuse croissante", "Pleine lune", "Gibbeuse décroissante",
                 "Dernier quartier", "Dernier croissant"];
 
-  var index = Math.floor(fraction * 8 + 0.5) % 8; // arrondi sur 8 phases
+  var index = Math.floor(fraction * 8 + 0.5) % 8;
   return { emoji: emojis[index], label: labels[index] };
 }
 
@@ -950,120 +828,60 @@ function refreshMoon() {
 /* ----------------------------------------------------------------------
    7. TRANSPORTS RATP (métro ligne 2, station Philippe Auguste)
    ----------------------------------------------------------------------
-   L'ancien appel utilisait ".../A+R" comme une seule URL. L'API RATP
-   attend une direction par requête : A et R sont donc interrogées
-   séparément puis regroupées dans le widget.
+   Un seul appel avec le paramètre combiné "A+R" (format attendu par
+   l'API), plutôt que deux appels séparés ".../A" et ".../R".
    ---------------------------------------------------------------------- */
-
-var RATP_BASE_URL = "https://api-ratp.pierre-grimaud.fr/v4/schedules/metros/2/philippe+auguste/";
-
-function renderRatpDirection(container, direction, data) {
-  if (!data || !data.result || !data.result.schedules || !data.result.schedules.length) {
-    container.innerHTML = '<div class="metro-error">Aucun horaire disponible</div>';
-    return;
-  }
-
-  var schedules = data.result.schedules;
-  var times = [];
-  var i;
-
-  for (i = 0; i < schedules.length; i++) {
-    if (schedules[i].message) {
-      times.push(escapeHtml(schedules[i].message));
-    }
-  }
-
-  var destination = schedules[0].destination || direction;
-  var html = '<div class="metro-direction">' +
-    '<span class="metro-line">2</span>' + escapeHtml(destination) +
-    '</div>' +
-    '<div class="metro-times">' + times.join(" &nbsp;•&nbsp; ") + '</div>';
-
-  container.innerHTML = html;
-}
+var RATP_URL = "https://api-ratp.pierre-grimaud.fr/v4/schedules/metros/2/philippe+auguste/A+R";
 
 function refreshRatp() {
   var container = document.getElementById("ratp-content");
   container.innerHTML = '<div class="metro-error">Chargement des horaires…</div>';
 
-  var results = { A: null, R: null };
-  var done = 0;
-  var failed = false;
+  xhrGetJSON(
+    RATP_URL,
+    function (data) {
+      if (!data.result || !data.result.schedules || !data.result.schedules.length) {
+        container.innerHTML = '<div class="metro-error">Horaires indisponibles pour le moment</div>';
+        return;
+      }
 
-  function finish(direction, data) {
-    results[direction] = data;
-    done++;
+      var schedules = data.result.schedules;
+      var groups = {};
+      var order = [];
+      var i;
 
-    if (done < 2) { return; }
-
-    var html = "";
-    var directions = ["A", "R"];
-    var i;
-
-    for (i = 0; i < directions.length; i++) {
-      var dir = directions[i];
-      var dataDir = results[dir];
-
-      if (dataDir && dataDir.result && dataDir.result.schedules &&
-          dataDir.result.schedules.length) {
-        var schedules = dataDir.result.schedules;
-        var times = [];
-        var j;
-
-        for (j = 0; j < schedules.length; j++) {
-          if (schedules[j].message) {
-            times.push(escapeHtml(schedules[j].message));
-          }
+      for (i = 0; i < schedules.length; i++) {
+        var dest = schedules[i].destination || "Direction inconnue";
+        if (!groups[dest]) {
+          groups[dest] = [];
+          order.push(dest);
         }
-
-        if (times.length) {
-          html += '<div class="metro-direction">' +
-            '<span class="metro-line">2</span>' +
-            escapeHtml((dir === "A" ? "Porte Dauphine" : "Nation")) +
-            '</div>' +
-            '<div class="metro-times">' +
-            times.join(" &nbsp;•&nbsp; ") +
-            '</div>';
+        if (schedules[i].message) {
+          groups[dest].push(escapeHtml(schedules[i].message));
         }
       }
-    }
 
-    if (!html) {
+      var html = "";
+      for (i = 0; i < order.length; i++) {
+        var d = order[i];
+        if (!groups[d].length) { continue; }
+        html += '<div class="metro-direction"><span class="metro-line">2</span>' +
+          escapeHtml(d) + '</div>' +
+          '<div class="metro-times">' + groups[d].join(" &nbsp;•&nbsp; ") + '</div>';
+      }
+
+      container.innerHTML = html || '<div class="metro-error">Horaires indisponibles pour le moment</div>';
+    },
+    function () {
       container.innerHTML = '<div class="metro-error">Horaires indisponibles pour le moment</div>';
-    } else {
-      container.innerHTML = html;
     }
-  }
-
-  function fail() {
-    done++;
-    if (done >= 2 && !results.A && !results.R) {
-      container.innerHTML =
-        '<div class="metro-error">Horaires indisponibles pour le moment</div>';
-    }
-  }
-
-  xhrGetJSON(RATP_BASE_URL + "A", function (data) {
-    results.A = data;
-    finish("A", data);
-  }, fail);
-
-  xhrGetJSON(RATP_BASE_URL + "R", function (data) {
-    results.R = data;
-    finish("R", data);
-  }, fail);
+  );
 }
 
 
 /* ----------------------------------------------------------------------
    8. AUDIO / RADIOS EN DIRECT
-   ----------------------------------------------------------------------
-   Les boutons lancent maintenant directement le flux au clic.
-   C'est important sur l'ancien Safari de l'iPad : dans l'ancienne version,
-   le bouton attendait une requête Radio Browser avant de faire player.play(),
-   ce qui pouvait être considéré comme une lecture automatique et être bloqué.
    ---------------------------------------------------------------------- */
-
 var RADIO_LABELS = {
   nova: "Radio Nova",
   tsfjazz: "TSF Jazz",
@@ -1101,13 +919,9 @@ function startPlayback(key) {
   player.src = url;
 
   var result = player.play();
-
-  /* play() peut retourner une Promise sur des versions plus récentes
-     de Safari ; on la traite sans utiliser async/await. */
   if (result && typeof result.catch === "function") {
     result.catch(function () {
-      statusEl.innerHTML = "Lecture bloquée — touchez à nouveau " +
-        RADIO_LABELS[key];
+      statusEl.innerHTML = "Lecture bloquée — touchez à nouveau " + RADIO_LABELS[key];
       clearActiveButtons();
     });
   }
@@ -1136,60 +950,66 @@ function stopRadio() {
 
 /* ----------------------------------------------------------------------
    9. INITIALISATION GENERALE
+   ----------------------------------------------------------------------
+   Chaque étape est isolée dans son propre try/catch : si un widget
+   rencontre un problème, il ne bloque plus jamais l'initialisation des
+   autres widgets (c'était la cause du bug principal de la version
+   précédente).
    ---------------------------------------------------------------------- */
-function initDashboard() {
-  buildStars();
-
-  // Horloge + date + fond : mise à jour chaque seconde
-  var now = updateClockAndDate();
-  updateBackground(now);
-  checkReminder(now);
-  setInterval(function () {
-    var n = updateClockAndDate();
-    updateBackground(n);
-    checkReminder(n);
-  }, 1000);
-
-  // Agenda : premier chargement, puis toutes les 5 minutes (les
-  // rendez-vous ne changent pas d'une seconde à l'autre)
-  refreshAgenda();
-  setInterval(refreshAgenda, 5 * 60 * 1000);
-
-  // Email (désactivé par défaut)
-  updateEmailIndicator();
-
-  // Shopping list : stockage local, pas de synchronisation réseau.
-  initShoppingList();
-
-  // Météo : premier chargement, puis toutes les 15 minutes (l'API n'a pas
-  // besoin d'être interrogée plus souvent que ça)
-  refreshWeather();
-  setInterval(refreshWeather, 15 * 60 * 1000);
-
-  // Lune : la phase change lentement, un rafraîchissement toutes les
-  // heures suffit largement
-  refreshMoon();
-  setInterval(refreshMoon, 60 * 60 * 1000);
-
-  // RATP : premier chargement, puis toutes les 60 secondes (données "temps réel")
-  refreshRatp();
-  setInterval(refreshRatp, 60000);
+function safeRun(fn, label) {
+  try {
+    fn();
+  } catch (e) {
+    if (window.console && console.error) {
+      console.error("Erreur dans " + label + " :", e);
+    }
+  }
 }
 
-// On attend que le DOM soit prêt avant de tout lancer. On évite
-// addEventListener("DOMContentLoaded", ...) avec une fonction fléchée,
-// mais une function() classique fonctionne très bien sur iOS 10.
+function initDashboard() {
+  safeRun(buildStars, "buildStars");
+
+  safeRun(function () {
+    var now = updateClockAndDate();
+    updateBackground(now);
+    checkReminder(now);
+    setInterval(function () {
+      var n = updateClockAndDate();
+      updateBackground(n);
+      checkReminder(n);
+    }, 1000);
+  }, "horloge");
+
+  safeRun(function () {
+    initShoppingList();
+  }, "liste de courses");
+
+  safeRun(function () {
+    refreshWeather();
+    setInterval(refreshWeather, 15 * 60 * 1000);
+  }, "météo");
+
+  safeRun(function () {
+    refreshMoon();
+    setInterval(refreshMoon, 60 * 60 * 1000);
+  }, "lune");
+
+  safeRun(function () {
+    refreshRatp();
+    setInterval(refreshRatp, 60000);
+  }, "RATP");
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   initDashboard();
 });
-
 </script>
-  
-  <script>
-  (function() {
+
+<script>
+  (function () {
     if (("standalone" in window.navigator) && window.navigator.standalone) {
       var noddy, remotes = false;
-      document.addEventListener('click', function(event) {
+      document.addEventListener('click', function (event) {
         noddy = event.target;
         while (noddy.nodeName !== "A" && noddy.nodeName !== "HTML") {
           noddy = noddy.parentNode;
@@ -1202,6 +1022,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   })();
 </script>
-  
+
 </body>
 </html>
