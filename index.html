@@ -727,7 +727,7 @@ var CALENDAR_ICS_URL = "https://calendar.google.com/calendar/ical/morgane.bonvin
 // d'en-têtes CORS sur le flux .ics de Google (voir le commentaire en
 // haut du fichier). Remplacez par votre propre proxy si vous préférez
 // ne pas dépendre d'un service tiers.
-var CORS_PROXY = "https://api.allorigins.win/raw?url=";
+var CORS_PROXY = "https://api.allorigins.win/raw?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmorgane.bonvin%2540gmail.com%2Fpublic%2Fbasic.ics.";
 
 function unfoldICSLines(text) {
   var rawLines = text.split(/\r\n|\n|\r/);
