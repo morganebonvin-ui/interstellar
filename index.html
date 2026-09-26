@@ -7,7 +7,7 @@
 
   CE QUI CHANGE DANS CETTE VERSION (v4 — "pixel art rétro") :
   1) Habillage visuel façon pixel art / arcade rétro : police pixel
-     (Press Start 2P pour les titres/boutons/horloge, VT323 pour le
+     (Silkscreen pour les titres/boutons/horloge, VT323 pour le
      texte courant, plus lisible en grande taille), bordures nettes
      sans arrondi, ombres portées "en bloc" façon jeu 8-bit, boutons
      avec effet d'enfoncement au clic. La disposition générale (colonnes
@@ -44,12 +44,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Dashboard">
 
-<!-- Polices pixel : "Press Start 2P" pour les titres/boutons/horloge (look
+<!-- Polices pixel : "Silkscreen" pour les titres/boutons/horloge (look
      arcade), "VT323" pour le texte courant (pixel mais plus lisible en
      grande taille). Chargées via Google Fonts — nécessite une connexion,
      comme les autres widgets (météo, radios). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
 
 <style>
 /* ==========================================================================
@@ -87,7 +87,8 @@ html, body {
 .pixel-font, .widget-title, .clock, .brand-label,
 .radio-btn, .btn-pixel, .forecast-day-label,
 .progress-day-label, .btn-add {
-  font-family: 'Press Start 2P', 'VT323', monospace;
+  font-family: 'Silkscreen', 'VT323', monospace;
+  font-weight: 700;
 }
 
 /* ==========================================================================
@@ -161,20 +162,22 @@ html, body {
    ========================================================================== */
 .widget {
   flex: 0 0 auto;
-  border: 3px solid #F5F5F7;
-  background: rgba(0,0,0,0.45);
-  border-radius: 0;
+  border: 1px solid rgba(255,255,255,0.28);
+  background: rgba(40,25,70,0.30);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 10px;
-  box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.30);
 }
 
 .widget-title {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #FFE066;
+  color: #F6C6E0;
   margin-bottom: 8px;
   text-align: center;
 }
@@ -187,7 +190,7 @@ html, body {
 .brand-label {
   font-size: 10px;
   letter-spacing: 2px;
-  color: #7DE0D3;
+  color: #A780FF;
   margin-bottom: 10px;
   text-align: center;
 }
@@ -206,7 +209,7 @@ html, body {
   font-variant-numeric: tabular-nums;
   text-align: center;
   margin-top: 8px;
-  text-shadow: 3px 3px 0 rgba(255,110,199,0.55);
+  text-shadow: 3px 3px 0 rgba(184,140,255,0.55);
 }
 
 /* ==========================================================================
@@ -219,7 +222,7 @@ html, body {
 .weather-left {
   width: 60%;
   padding-right: 10px;
-  border-right: 2px dashed rgba(255,255,255,0.25);
+  border-right: 2px dashed rgba(184,140,255,0.35);
 }
 .weather-right {
   width: 40%;
@@ -249,7 +252,7 @@ html, body {
   justify-content: space-between;
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 2px dashed rgba(255,255,255,0.2);
+  border-top: 2px dashed rgba(184,140,255,0.3);
 }
 .forecast-day {
   flex: 1;
@@ -257,7 +260,7 @@ html, body {
 }
 .forecast-day-label {
   font-size: 8px;
-  color: #7DE0D3;
+  color: #A780FF;
   margin-bottom: 4px;
 }
 .forecast-day-icon { font-size: 18px; }
@@ -271,10 +274,10 @@ html, body {
   text-align: center;
   padding-bottom: 10px;
   margin-bottom: 10px;
-  border-bottom: 2px dashed rgba(255,255,255,0.2);
+  border-bottom: 2px dashed rgba(184,140,255,0.3);
 }
 .moon-emoji { font-size: 34px; }
-.moon-label { font-size: 14px; color: #B5B5BA; margin-top: 6px; }
+.moon-label { font-size: 14px; color: #FFD447; margin-top: 6px; }
 .sun-panel { text-align: center; }
 .sun-time {
   font-size: 17px;
@@ -284,8 +287,8 @@ html, body {
 
 /* RAPPELS */
 .widget.reminder {
-  border-color: #E5C158;
-  background: rgba(60,50,10,0.45);
+  border-color: #F6C6E0;
+  background: rgba(70,20,55,0.35);
   text-align: center;
   font-size: 17px;
   padding: 12px;
@@ -294,28 +297,32 @@ html, body {
 
 /* BARRE DE PROGRESSION 28 JOURS */
 .progress-bar-outer {
-  border: 3px solid #F5F5F7;
+  border: 3px solid #FFFFFF;
+  border-radius: 5px;
   height: 22px;
   background: rgba(255,255,255,0.08);
   margin-top: 6px;
   position: relative;
+  overflow: hidden;
 }
 .progress-bar-inner {
   height: 100%;
   width: 0%;
   background-image: repeating-linear-gradient(
     90deg,
-    #FF6EC7 0px, #FF6EC7 8px,
-    #FFE066 8px, #FFE066 16px
+    #FFFFFF 0px, #FFFFFF 6px,
+    #F6C6E0 6px, #F6C6E0 12px,
+    #A780FF 12px, #A780FF 18px,
+    #FFD447 18px, #FFD447 20px
   );
 }
+.progress-day-label { font-size: 10px; color: #FFFFFF; }
 .progress-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
 }
-.progress-day-label { font-size: 10px; color: #E4E4E9; }
 .progress-flower {
   font-size: 26px;
   line-height: 1;
@@ -344,12 +351,12 @@ html, body {
   min-width: 0;
 }
 .shopping-input input::placeholder { color: #C7C7CC; opacity: 0.55; }
-.shopping-input input:focus { border-color: #FFE066; }
+.shopping-input input:focus { border-color: #F6C6E0; }
 .btn-add {
   position: relative;
-  background: #FFE066;
-  border: 2px solid #F5F5F7;
-  border-radius: 0;
+  background: #FFFFFF;
+  border: 2px solid #A780FF;
+  border-radius: 6px;
   width: 40px;
   height: 40px;
   margin-left: 8px;
@@ -381,7 +388,7 @@ html, body {
   border-bottom: 2px dashed rgba(255,255,255,0.15);
   font-size: 18px;
 }
-.shop-check { width: 20px; height: 20px; accent-color: #FF6EC7; margin-right: 10px; }
+.shop-check { width: 20px; height: 20px; accent-color: #FFD447; margin-right: 10px; }
 .shop-item.done span { text-decoration: line-through; opacity: 0.35; }
 .shop-item span { flex: 1; }
 .btn-del { background: none; border: none; color: #fff; opacity: 0.4; font-size: 17px; padding: 0 6px; }
@@ -395,8 +402,8 @@ html, body {
   justify-content: center;
 }
 .radio-btn {
-  border: 2px solid #F5F5F7;
-  border-radius: 0;
+  border: 2px solid #FFFFFF;
+  border-radius: 6px;
   background: rgba(255,255,255,0.08);
   color: #F5F5F7;
   font-size: 10px;
@@ -405,46 +412,97 @@ html, body {
   margin: 5px;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
 }
-.radio-btn.active { background: #FF6EC7; color: #000000; border-color: #FFFFFF; }
+.radio-btn.active { background: #A780FF; color: #1A0F2E; border-color: #FFFFFF; }
 .radio-btn:active { box-shadow: 1px 1px 0 rgba(0,0,0,0.5); transform: translate(2px,2px); }
 .audio-status { font-size: 14px; color: #9A9AA0; margin-top: 10px; text-align: center; }
 
-/* JE M'ENNUIE */
+/* JE M'ENNUIE — encart compact (de la place est prévue en dessous) */
 .widget.bored {
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 14px 12px;
 }
 .btn-pixel {
+  position: relative;
   font-size: 13px;
-  background: #7DE0D3;
-  color: #000000;
-  border: 3px solid #F5F5F7;
-  border-radius: 0;
-  padding: 16px 18px;
-  margin-top: 6px;
-  box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+  background: linear-gradient(180deg, #FDE3F0 0%, #F6C6E0 55%, #EFAFD4 100%);
+  color: #6B2456;
+  border: 3px solid #FFFFFF;
+  border-radius: 4px;
+  padding: 16px 22px;
+  margin-top: 4px;
+  -webkit-clip-path: polygon(
+    9px 0, calc(100% - 9px) 0, 100% 9px,
+    100% calc(100% - 9px), calc(100% - 9px) 100%,
+    9px 100%, 0 calc(100% - 9px), 0 9px
+  );
+  clip-path: polygon(
+    9px 0, calc(100% - 9px) 0, 100% 9px,
+    100% calc(100% - 9px), calc(100% - 9px) 100%,
+    9px 100%, 0 calc(100% - 9px), 0 9px
+  );
+  box-shadow:
+    0 6px 0 #C983AC,
+    0 11px 14px rgba(0,0,0,0.45),
+    inset 0 2px 0 rgba(255,255,255,0.85),
+    inset 0 -3px 0 rgba(201,131,172,0.5);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
 .btn-pixel:active {
-  box-shadow: 2px 2px 0 rgba(0,0,0,0.55);
-  transform: translate(3px,3px);
+  transform: translateY(6px);
+  box-shadow:
+    0 0px 0 #C983AC,
+    0 3px 5px rgba(0,0,0,0.45),
+    inset 0 2px 0 rgba(255,255,255,0.85),
+    inset 0 -3px 0 rgba(201,131,172,0.5);
 }
 .bored-result {
-  font-size: 22px;
-  margin-top: 18px;
+  display: none;
+  font-size: 20px;
+  margin-top: 4px;
   line-height: 1.4;
-  padding: 0 10px;
-  color: #FFE066;
-  min-height: 60px;
+  padding: 4px 8px;
+  color: #A780FF;
+}
+.bored-reset {
+  display: none;
+  width: 34px;
+  height: 34px;
+  line-height: 28px;
+  background: rgba(0,0,0,0.35);
+  border: 2px solid #FFFFFF;
+  border-radius: 4px;
+  -webkit-clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+  font-family: 'Silkscreen', 'VT323', monospace;
+  font-size: 16px;
+  color: #FFD447;
+  text-align: center;
+  padding: 0;
+  margin-top: 12px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.5), 0 6px 6px rgba(0,0,0,0.3);
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+.bored-reset:active {
+  transform: translateY(3px);
+  box-shadow: 0 0px 0 rgba(0,0,0,0.5), 0 2px 3px rgba(0,0,0,0.3);
 }
 
-.deco-star { color: #FFE066; opacity: 0.9; }
+.deco-star { color: #FFD447; opacity: 0.95; font-size: 20px; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -530,8 +588,9 @@ html, body {
 
       <div class="widget bored">
         <div class="widget-title"><span class="deco-star">✦</span> Petit creux d'inspiration <span class="deco-star">✦</span></div>
-        <button class="btn-pixel" onclick="showActivity()">JE M'ENNUIE</button>
-        <div class="bored-result" id="bored-result">Touche le bouton pour une idée !</div>
+        <button class="btn-pixel" id="bored-btn" onclick="showActivity()">JE M'ENNUIE</button>
+        <div class="bored-result" id="bored-result"></div>
+        <button class="bored-reset" id="bored-reset" onclick="resetBored()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
       </div>
 
     </div>
@@ -978,6 +1037,16 @@ var BORED_ACTIVITIES = [
 function showActivity() {
   var idx = Math.floor(Math.random() * BORED_ACTIVITIES.length);
   document.getElementById("bored-result").innerHTML = escapeHtml(BORED_ACTIVITIES[idx]);
+  document.getElementById("bored-result").style.display = "block";
+  document.getElementById("bored-btn").style.display = "none";
+  document.getElementById("bored-reset").style.display = "inline-block";
+}
+
+function resetBored() {
+  document.getElementById("bored-result").innerHTML = "";
+  document.getElementById("bored-result").style.display = "none";
+  document.getElementById("bored-btn").style.display = "inline-block";
+  document.getElementById("bored-reset").style.display = "none";
 }
 
 
