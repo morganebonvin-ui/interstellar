@@ -416,6 +416,85 @@ html, body {
 .radio-btn:active { box-shadow: 1px 1px 0 rgba(0,0,0,0.5); transform: translate(2px,2px); }
 .audio-status { font-size: 14px; color: #9A9AA0; margin-top: 10px; text-align: center; }
 
+/* POMODORO */
+.widget.pomodoro { text-align: center; }
+.pomodoro-label {
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #A780FF;
+  margin-bottom: 6px;
+}
+.pomodoro-time {
+  font-family: 'Silkscreen', monospace;
+  font-size: 44px;
+  letter-spacing: 2px;
+  color: #FFFFFF;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 3px 3px 0 rgba(167,128,255,0.4);
+  margin-bottom: 12px;
+}
+.pomodoro-dots {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.pomo-dot {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #FFFFFF;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.08);
+  margin: 0 4px;
+}
+.pomo-dot.filled { background: #FFD447; border-color: #FFD447; }
+.pomodoro-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-pomo {
+  position: relative;
+  font-family: 'Silkscreen', monospace;
+  font-size: 16px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(180deg, #FDE3F0 0%, #F6C6E0 55%, #EFAFD4 100%);
+  color: #6B2456;
+  border: 2px solid #FFFFFF;
+  border-radius: 4px;
+  margin: 0 7px;
+  -webkit-clip-path: polygon(
+    6px 0, calc(100% - 6px) 0, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 0 calc(100% - 6px), 0 6px
+  );
+  clip-path: polygon(
+    6px 0, calc(100% - 6px) 0, 100% 6px,
+    100% calc(100% - 6px), calc(100% - 6px) 100%,
+    6px 100%, 0 calc(100% - 6px), 0 6px
+  );
+  box-shadow: 0 5px 0 #C983AC, 0 8px 8px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.8);
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+.btn-pomo:active {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 #C983AC, 0 2px 3px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.8);
+}
+.btn-pomo-secondary {
+  width: 38px;
+  height: 38px;
+  font-size: 14px;
+  background: rgba(255,255,255,0.10);
+  color: #FFD447;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.45), 0 6px 6px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15);
+}
+.btn-pomo-secondary:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 rgba(0,0,0,0.45), 0 2px 3px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15);
+}
+
 /* JE M'ENNUIE — encart compact (de la place est prévue en dessous) */
 .widget.bored {
   flex: 0 0 auto;
@@ -584,6 +663,18 @@ html, body {
         </div>
         <audio id="radio-player"></audio>
         <div class="audio-status" id="audio-status">Aucune radio en cours</div>
+      </div>
+
+      <div class="widget pomodoro">
+        <div class="widget-title"><span class="deco-star">✦</span> Pomodoro <span class="deco-star">✦</span></div>
+        <div class="pomodoro-label" id="pomodoro-label">Travail</div>
+        <div class="pomodoro-time" id="pomodoro-time">25:00</div>
+        <div class="pomodoro-dots" id="pomodoro-dots"></div>
+        <div class="pomodoro-controls">
+          <button class="btn-pomo btn-pomo-secondary" onclick="resetPomodoro()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
+          <button class="btn-pomo" id="pomodoro-startpause" onclick="togglePomodoro()" aria-label="Démarrer / Pause" title="Démarrer / Pause">▶</button>
+          <button class="btn-pomo btn-pomo-secondary" onclick="skipPomodoro()" aria-label="Passer" title="Passer à la phase suivante">⏭</button>
+        </div>
       </div>
 
       <div class="widget bored">
@@ -1051,6 +1142,162 @@ function resetBored() {
 
 
 /* ----------------------------------------------------------------------
+   7bis. POMODORO — minuteur travail/pause avec sonnerie
+   ----------------------------------------------------------------------
+   25 min de travail / 5 min de pause courte, avec une pause longue de
+   15 min toutes les 4 sessions de travail. La sonnerie est générée en
+   direct via Web Audio (aucun fichier audio à charger). Le contexte
+   audio est créé/relancé au premier clic sur "Démarrer" (geste
+   utilisateur requis par iOS) puis réutilisé pour la sonnerie de fin.
+   ---------------------------------------------------------------------- */
+var POMODORO_WORK_MIN = 25;
+var POMODORO_BREAK_MIN = 5;
+var POMODORO_LONG_BREAK_MIN = 15;
+
+var pomodoroState = {
+  mode: "work",
+  remaining: POMODORO_WORK_MIN * 60,
+  running: false,
+  intervalId: null,
+  cyclesCompleted: 0
+};
+
+var pomodoroAudioCtx = null;
+
+function formatPomodoroTime(totalSeconds) {
+  var m = Math.floor(totalSeconds / 60);
+  var s = totalSeconds % 60;
+  return pad2(m) + ":" + pad2(s);
+}
+
+function renderPomodoroDots() {
+  var container = document.getElementById("pomodoro-dots");
+  if (!container) { return; }
+  var completedInCycle = pomodoroState.cyclesCompleted % 4;
+  var html = "";
+  var i;
+  for (i = 0; i < 4; i++) {
+    html += '<span class="pomo-dot' + (i < completedInCycle ? " filled" : "") + '"></span>';
+  }
+  container.innerHTML = html;
+}
+
+function updatePomodoroDisplay() {
+  var timeEl = document.getElementById("pomodoro-time");
+  var labelEl = document.getElementById("pomodoro-label");
+  if (timeEl) { timeEl.innerHTML = formatPomodoroTime(pomodoroState.remaining); }
+  if (labelEl) {
+    var label = "Travail";
+    if (pomodoroState.mode === "break") { label = "Pause"; }
+    else if (pomodoroState.mode === "longbreak") { label = "Pause longue"; }
+    labelEl.innerHTML = label;
+  }
+  renderPomodoroDots();
+}
+
+function advancePomodoroMode() {
+  if (pomodoroState.mode === "work") {
+    pomodoroState.cyclesCompleted++;
+    if (pomodoroState.cyclesCompleted % 4 === 0) {
+      pomodoroState.mode = "longbreak";
+      pomodoroState.remaining = POMODORO_LONG_BREAK_MIN * 60;
+    } else {
+      pomodoroState.mode = "break";
+      pomodoroState.remaining = POMODORO_BREAK_MIN * 60;
+    }
+  } else {
+    pomodoroState.mode = "work";
+    pomodoroState.remaining = POMODORO_WORK_MIN * 60;
+  }
+}
+
+function ensurePomodoroAudio() {
+  if (!pomodoroAudioCtx) {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (Ctx) {
+      try { pomodoroAudioCtx = new Ctx(); } catch (e) {}
+    }
+  }
+  if (pomodoroAudioCtx && pomodoroAudioCtx.state === "suspended" && pomodoroAudioCtx.resume) {
+    try { pomodoroAudioCtx.resume(); } catch (e2) {}
+  }
+}
+
+function playPomodoroBeep(ctx, delaySeconds, frequency) {
+  try {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    var startTime = ctx.currentTime + delaySeconds;
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.35, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35);
+    osc.start(startTime);
+    osc.stop(startTime + 0.4);
+  } catch (e) {}
+}
+
+function pomodoroAlarm() {
+  ensurePomodoroAudio();
+  if (!pomodoroAudioCtx) { return; }
+  playPomodoroBeep(pomodoroAudioCtx, 0, 880);
+  playPomodoroBeep(pomodoroAudioCtx, 0.45, 880);
+  playPomodoroBeep(pomodoroAudioCtx, 0.9, 1175);
+}
+
+function pomodoroTick() {
+  pomodoroState.remaining--;
+  if (pomodoroState.remaining <= 0) {
+    pomodoroAlarm();
+    advancePomodoroMode();
+  }
+  updatePomodoroDisplay();
+}
+
+function startPomodoro() {
+  if (pomodoroState.running) { return; }
+  ensurePomodoroAudio();
+  pomodoroState.running = true;
+  var btn = document.getElementById("pomodoro-startpause");
+  if (btn) { btn.innerHTML = "❚❚"; }
+  pomodoroState.intervalId = setInterval(pomodoroTick, 1000);
+}
+
+function pausePomodoro() {
+  pomodoroState.running = false;
+  var btn = document.getElementById("pomodoro-startpause");
+  if (btn) { btn.innerHTML = "▶"; }
+  if (pomodoroState.intervalId) {
+    clearInterval(pomodoroState.intervalId);
+    pomodoroState.intervalId = null;
+  }
+}
+
+function togglePomodoro() {
+  if (pomodoroState.running) { pausePomodoro(); } else { startPomodoro(); }
+}
+
+function skipPomodoro() {
+  var wasRunning = pomodoroState.running;
+  pausePomodoro();
+  advancePomodoroMode();
+  updatePomodoroDisplay();
+  if (wasRunning) { startPomodoro(); }
+}
+
+function resetPomodoro() {
+  pausePomodoro();
+  pomodoroState.mode = "work";
+  pomodoroState.remaining = POMODORO_WORK_MIN * 60;
+  pomodoroState.cyclesCompleted = 0;
+  updatePomodoroDisplay();
+}
+
+
+/* ----------------------------------------------------------------------
    8. AUDIO / RADIOS EN DIRECT
    ---------------------------------------------------------------------- */
 var RADIO_LABELS = {
@@ -1171,6 +1418,10 @@ function initDashboard() {
     updateProgressBar();
     setInterval(updateProgressBar, 60 * 60 * 1000);
   }, "barre de progression");
+
+  safeRun(function () {
+    updatePomodoroDisplay();
+  }, "pomodoro");
 }
 
 document.addEventListener("DOMContentLoaded", function () {
