@@ -5,54 +5,31 @@
   ============================================================================
   Fichier 100% autonome : un seul index.html, prêt pour GitHub Pages.
 
-  CE QUI CHANGE DANS CETTE VERSION (v3) :
-  1) Colonnes asymétriques : gauche 40% / droite 60% (colonne de gauche
-     plus étroite, au lieu de 50/50).
-  2) L'encart de titre indépendant "Momo's Dashboard" est supprimé. Le
-     widget Date et le widget Heure sont fusionnés en UN SEUL widget, qui
-     réintègre discrètement "✦ Momo's Dashboard ✦" comme petit libellé
-     au-dessus de la date et de l'heure.
-  3) Fond dynamique CONTINU : au lieu d'un simple bascule jour/nuit à 6h
-     et 18h, le dégradé s'éclaircit progressivement vers un bleu pastel
-     lumineux (en haut) / violet doux (en bas) à mesure que l'heure se
-     rapproche de midi (courbe en sinus centrée sur 12h, entre 6h et
-     18h), puis se rassombrit progressivement le soir vers un bleu nuit
-     profond (en haut) / violet très sombre (en bas). La logique
-     "bleu en haut, violet en bas" est conservée à toute heure.
-  4) L'agenda n'utilise PLUS d'iframe Google Calendar. Sur iOS < 13, le
-     scroll tactile À L'INTÉRIEUR d'un iframe ne fonctionne quasiment
-     jamais, ce qui coupait le contenu sans aucun moyen de le faire
-     défiler. L'agenda est maintenant récupéré via le flux public .ics
-     du calendrier (XMLHttpRequest), parsé en JavaScript ES5, puis
-     affiché comme une liste HTML native — stylée comme le reste du
-     dashboard, et qui défile normalement au doigt (-webkit-overflow-
-     scrolling: touch).
+  CE QUI CHANGE DANS CETTE VERSION (v4 — "pixel art rétro") :
+  1) Habillage visuel façon pixel art / arcade rétro : police pixel
+     (Press Start 2P pour les titres/boutons/horloge, VT323 pour le
+     texte courant, plus lisible en grande taille), bordures nettes
+     sans arrondi, ombres portées "en bloc" façon jeu 8-bit, boutons
+     avec effet d'enfoncement au clic. La disposition générale (colonnes
+     40/60, fond dégradé continu, ciel étoilé) est conservée à l'identique.
+  2) Suppression complète des widgets Agenda, Horaires RATP (métro) et
+     Spotify — HTML, CSS et JavaScript associés retirés.
+  3) Refonte du bloc Météo/Lune/Soleil : la météo du jour prend plus de
+     place, une ligne de prévisions sur 4 jours (icône + min/max, en
+     plus petit) est ajoutée dessous, et la lune + le lever/coucher du
+     soleil sont affichés à droite du bloc. Les libellés texte "Lever"
+     et "Coucher" ont été retirés (seuls les horaires avec une icône
+     restent affichés).
+  4) Ajout d'une barre de progression sur 28 jours, avec une petite
+     fleur cliquable à côté qui réinitialise le cycle (stockage dans
+     localStorage, donc persiste entre les rechargements).
+  5) Ajout d'un bouton "Je m'ennuie" : à chaque clic, une activité est
+     tirée au sort parmi une liste de 12 idées et affichée en dessous.
 
-     IMPORTANT — CORS : le fichier .ics de Google Calendar n'envoie pas
-     d'en-tête Access-Control-Allow-Origin, donc un navigateur bloque un
-     appel XHR direct depuis un autre domaine (ex: GitHub Pages). Pour
-     contourner ça sans mettre en place son propre petit serveur, ce
-     fichier passe par un proxy CORS public gratuit (allorigins.win) qui
-     relaie le contenu du .ics avec les bons en-têtes. C'est la solution
-     la plus simple, mais elle dépend de la disponibilité de ce service
-     tiers et fait transiter le contenu de votre agenda par lui. Si vous
-     préférez éviter ça, remplacez CORS_PROXY par votre propre petit
-     proxy (ex: une Cloudflare Worker gratuite de 5 lignes) — l'endroit
-     à modifier est marqué "A CONFIGURER" plus bas dans le script.
-     Le calendrier doit aussi être réglé sur "Rendre disponible au
-     public" dans les paramètres de partage Google Calendar, sinon le
-     flux .ics répond une erreur.
-  5) Limitation assumée du parseur ICS "maison" : les événements
-     récurrents (RRULE) ne sont pas développés en plusieurs occurrences
-     — seule la date de la définition d'origine est prise en compte.
-     Pour un agenda familial affichant surtout des rendez-vous ponctuels,
-     c'est un compromis raisonnable pour rester en pur ES5 sans
-     dépendance externe.
-
-  Reprend intégralement les correctifs de la version précédente : plus de
+  Reprend intégralement les correctifs des versions précédentes : plus de
   plantage en cascade (chaque widget est isolé dans son propre try/catch),
-  mise en page 100% Flexbox (aucun débordement possible), météo et RATP en
-  ES5 pur, mode kiosque conservé.
+  mise en page 100% Flexbox (aucun débordement possible), météo en ES5 pur,
+  mode kiosque conservé.
 
   Cherchez "A CONFIGURER" pour les endroits à personnaliser.
   ============================================================================
@@ -66,6 +43,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Dashboard">
+
+<!-- Polices pixel : "Press Start 2P" pour les titres/boutons/horloge (look
+     arcade), "VT323" pour le texte courant (pixel mais plus lisible en
+     grande taille). Chargées via Google Fonts — nécessite une connexion,
+     comme les autres widgets (météo, radios). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
 
 <style>
 /* ==========================================================================
@@ -84,7 +68,7 @@ input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
-button, .shop-check, .radio-btn, .btn-del, .btn-add {
+button, .shop-check, .radio-btn, .btn-del, .btn-add, .progress-flower, .btn-pixel {
   cursor: pointer;
 }
 
@@ -92,10 +76,18 @@ html, body {
   width: 1024px;
   height: 768px;
   overflow: hidden;
-  font-family: -apple-system, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'VT323', "SF Pro Display", Helvetica, Arial, sans-serif;
+  font-size: 19px;
   color: #F5F5F7;
   background: linear-gradient(180deg, #141E3C 0%, #190A28 100%);
   transition: background 3s ease;
+}
+
+/* Titres, horloge et boutons : police pixel/arcade */
+.pixel-font, .widget-title, .clock, .brand-label,
+.radio-btn, .btn-pixel, .forecast-day-label,
+.progress-day-label, .btn-add {
+  font-family: 'Press Start 2P', 'VT323', monospace;
 }
 
 /* ==========================================================================
@@ -112,10 +104,12 @@ html, body {
 .star {
   position: absolute;
   background: #FFFFFF;
-  border-radius: 50%;
+  border-radius: 0;
+  width: 3px !important;
+  height: 3px !important;
   opacity: 0.2;
   animation-name: twinkle;
-  animation-timing-function: ease-in-out;
+  animation-timing-function: steps(4);
   animation-iteration-count: infinite;
 }
 @keyframes twinkle {
@@ -162,22 +156,26 @@ html, body {
   padding-left: 7px;
 }
 
+/* ==========================================================================
+   STYLE "PIXEL ART" DES ENCARTS
+   ========================================================================== */
 .widget {
   flex: 0 0 auto;
-  border: 1px solid rgba(255,255,255,0.25);
-  background: rgba(0,0,0,0.35);
-  border-radius: 10px;
+  border: 3px solid #F5F5F7;
+  background: rgba(0,0,0,0.45);
+  border-radius: 0;
   padding: 10px 12px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
 }
 
 .widget-title {
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 1.6;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #C7C7CC;
-  margin-bottom: 6px;
-  font-weight: 600;
+  color: #FFE066;
+  margin-bottom: 8px;
   text-align: center;
 }
 
@@ -187,43 +185,48 @@ html, body {
   padding: 14px 12px 12px;
 }
 .brand-label {
-  font-size: 13px;
+  font-size: 10px;
   letter-spacing: 2px;
-  color: rgba(245,245,247,0.55);
-  margin-bottom: 8px;
+  color: #7DE0D3;
+  margin-bottom: 10px;
   text-align: center;
 }
 .date-fr {
-  font-size: 18px;
+  font-size: 19px;
   color: #E4E4E9;
   letter-spacing: 0.6px;
   text-transform: capitalize;
   text-align: center;
 }
 .clock {
-  font-size: 66px;
-  line-height: 70px;
-  font-weight: 200;
+  font-size: 34px;
+  line-height: 44px;
   letter-spacing: 2px;
   color: #FFFFFF;
   font-variant-numeric: tabular-nums;
   text-align: center;
-  margin-top: 4px;
+  margin-top: 8px;
+  text-shadow: 3px 3px 0 rgba(255,110,199,0.55);
 }
 
-/* METEO + LUNE + SOLEIL */
-.weather-moon-sun {
+/* ==========================================================================
+   METEO / PREVISIONS / LUNE / SOLEIL
+   ========================================================================== */
+.weather-block {
   display: flex;
   flex-direction: row;
-  padding-top: 12px;
-  padding-bottom: 12px;
 }
-.weather-panel, .moon-panel, .sun-panel {
-  width: 33.333%;
-  text-align: center;
+.weather-left {
+  width: 60%;
+  padding-right: 10px;
+  border-right: 2px dashed rgba(255,255,255,0.25);
 }
-.weather-panel, .moon-panel {
-  border-right: 1px solid rgba(255,255,255,0.10);
+.weather-right {
+  width: 40%;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .weather-main {
   display: flex;
@@ -231,49 +234,94 @@ html, body {
   justify-content: center;
   margin-bottom: 4px;
 }
-.weather-temp { font-size: 36px; font-weight: 300; }
-.weather-icon { font-size: 32px; margin-left: 8px; }
+.weather-temp { font-size: 50px; font-weight: bold; color: #FFFFFF; }
+.weather-icon { font-size: 40px; margin-left: 10px; }
 .weather-sub {
-  font-size: 12px;
-  color: #B5B5BA;
-  line-height: 1.35;
-  padding: 0 4px;
+  font-size: 17px;
+  color: #C7C7CC;
+  line-height: 1.3;
+  text-align: center;
 }
-.moon-main {
+
+.forecast-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px dashed rgba(255,255,255,0.2);
 }
-.moon-emoji { font-size: 42px; }
-.moon-label { font-size: 12px; color: #B5B5BA; margin-top: 6px; }
-.sun-panel { padding-top: 2px; }
+.forecast-day {
+  flex: 1;
+  text-align: center;
+}
+.forecast-day-label {
+  font-size: 8px;
+  color: #7DE0D3;
+  margin-bottom: 4px;
+}
+.forecast-day-icon { font-size: 18px; }
+.forecast-day-temp {
+  font-size: 14px;
+  color: #E4E4E9;
+  margin-top: 2px;
+}
+
+.moon-panel {
+  text-align: center;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 2px dashed rgba(255,255,255,0.2);
+}
+.moon-emoji { font-size: 34px; }
+.moon-label { font-size: 14px; color: #B5B5BA; margin-top: 6px; }
+.sun-panel { text-align: center; }
 .sun-time {
   font-size: 17px;
   color: #FFFFFF;
-  margin: 8px 0;
-  text-align: center;
-}
-.sun-time span {
-  display: block;
-  font-size: 10px;
-  color: #9A9AA0;
-  margin-bottom: 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  text-align: center;
+  margin: 4px 0;
 }
 
 /* RAPPELS */
 .widget.reminder {
-  border-color: rgba(229,193,88,0.65);
-  background: rgba(60,50,10,0.35);
+  border-color: #E5C158;
+  background: rgba(60,50,10,0.45);
   text-align: center;
   font-size: 17px;
-  font-weight: bold;
   padding: 12px;
   display: none;
 }
+
+/* BARRE DE PROGRESSION 28 JOURS */
+.progress-bar-outer {
+  border: 3px solid #F5F5F7;
+  height: 22px;
+  background: rgba(255,255,255,0.08);
+  margin-top: 6px;
+  position: relative;
+}
+.progress-bar-inner {
+  height: 100%;
+  width: 0%;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #FF6EC7 0px, #FF6EC7 8px,
+    #FFE066 8px, #FFE066 16px
+  );
+}
+.progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.progress-day-label { font-size: 10px; color: #E4E4E9; }
+.progress-flower {
+  font-size: 26px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+.progress-flower:active { transform: translate(1px,1px); }
 
 /* SHOPPING LIST (widget flexible : absorbe l'espace restant de la colonne) */
 .widget.shopping {
@@ -286,40 +334,39 @@ html, body {
 .shopping-input input {
   flex: 1;
   background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 8px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 0;
   padding: 9px 12px;
   color: #fff;
-  font-size: 15px;
+  font-size: 18px;
   outline: none;
-  font-family: inherit;
+  font-family: 'VT323', inherit;
   min-width: 0;
 }
-.shopping-input input::placeholder { color: #C7C7CC; opacity: 0.45; }
-.shopping-input input:focus { border-color: rgba(255,255,255,0.4); }
+.shopping-input input::placeholder { color: #C7C7CC; opacity: 0.55; }
+.shopping-input input:focus { border-color: #FFE066; }
 .btn-add {
   position: relative;
-  background: rgba(255,255,255,0.15);
-  border: none;
-  border-radius: 8px;
-  width: 38px;
-  height: 38px;
+  background: #FFE066;
+  border: 2px solid #F5F5F7;
+  border-radius: 0;
+  width: 40px;
+  height: 40px;
   margin-left: 8px;
   flex: 0 0 auto;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
 }
-/* Le "+" est dessiné avec deux barres en CSS pur plutôt qu'avec le
-   caractère texte "+", dont le rendu (métriques de police, baseline)
-   n'est jamais parfaitement centré sur tous les navigateurs — cette
-   méthode donne un centrage pixel-parfait, y compris sur iOS 10. */
 .btn-add::before, .btn-add::after {
   content: "";
   position: absolute;
   top: 50%;
   left: 50%;
-  background: #fff;
+  background: #000;
 }
-.btn-add::before { width: 14px; height: 2px; margin: -1px 0 0 -7px; }
-.btn-add::after { width: 2px; height: 14px; margin: -7px 0 0 -1px; }
+.btn-add::before { width: 14px; height: 3px; margin: -1px 0 0 -7px; }
+.btn-add::after { width: 3px; height: 14px; margin: -7px 0 0 -1px; }
+.btn-add:active { box-shadow: 1px 1px 0 rgba(0,0,0,0.5); transform: translate(2px,2px); }
+
 .shopping-list {
   list-style: none;
   flex: 1 1 auto;
@@ -331,14 +378,14 @@ html, body {
   display: flex;
   align-items: center;
   padding: 7px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  font-size: 15px;
+  border-bottom: 2px dashed rgba(255,255,255,0.15);
+  font-size: 18px;
 }
-.shop-check { width: 19px; height: 19px; accent-color: #a78bfa; margin-right: 10px; }
+.shop-check { width: 20px; height: 20px; accent-color: #FF6EC7; margin-right: 10px; }
 .shop-item.done span { text-decoration: line-through; opacity: 0.35; }
 .shop-item span { flex: 1; }
-.btn-del { background: none; border: none; color: #fff; opacity: 0.3; font-size: 15px; padding: 0 6px; }
-.shopping-status { flex: 0 0 auto; font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
+.btn-del { background: none; border: none; color: #fff; opacity: 0.4; font-size: 17px; padding: 0 6px; }
+.shopping-status { flex: 0 0 auto; font-size: 14px; color: #9A9AA0; margin-top: 6px; text-align: center; }
 
 /* RADIOS */
 .audio-buttons {
@@ -348,71 +395,56 @@ html, body {
   justify-content: center;
 }
 .radio-btn {
-  border: 1px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.06);
+  border: 2px solid #F5F5F7;
+  border-radius: 0;
+  background: rgba(255,255,255,0.08);
   color: #F5F5F7;
-  font-size: 13px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  margin: 4px 5px;
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 10px 10px;
+  margin: 5px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
 }
-.radio-btn.active { background: #FFFFFF; color: #000000; border-color: #FFFFFF; }
-.audio-status { font-size: 12px; color: #9A9AA0; margin-top: 6px; text-align: center; }
+.radio-btn.active { background: #FF6EC7; color: #000000; border-color: #FFFFFF; }
+.radio-btn:active { box-shadow: 1px 1px 0 rgba(0,0,0,0.5); transform: translate(2px,2px); }
+.audio-status { font-size: 14px; color: #9A9AA0; margin-top: 10px; text-align: center; }
 
-/* SPOTIFY — lecteur intégré (plus de lien de secours externe) */
-.spotify-embed {
-  display: block;
-  width: 100%;
-  height: 176px;
-  margin-top: 6px;
-  border: 0;
-  border-radius: 10px;
-}
-
-/* METRO */
-.metro-line {
-  display: inline-block;
-  background: #F5F5F7;
-  color: #000;
-  font-weight: bold;
-  font-size: 12px;
-  width: 20px;
-  height: 20px;
-  line-height: 20px;
-  text-align: center;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-.metro-direction { font-size: 13px; color: #E4E4E9; margin-top: 6px; text-align: center; }
-.metro-times { font-size: 13px; color: #FFFFFF; margin-top: 3px; text-align: center; }
-.metro-error { font-size: 12px; color: #9A9AA0; font-style: italic; text-align: center; }
-
-/* AGENDA (widget flexible, liste HTML native — plus d'iframe) */
-.widget.agenda {
+/* JE M'ENNUIE */
+.widget.bored {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  margin-bottom: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-#agenda-list {
-  list-style: none;
+.btn-pixel {
   font-size: 13px;
-  line-height: 1.5;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  background: #7DE0D3;
+  color: #000000;
+  border: 3px solid #F5F5F7;
+  border-radius: 0;
+  padding: 16px 18px;
+  margin-top: 6px;
+  box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
-#agenda-list li {
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  padding: 6px 2px;
+.btn-pixel:active {
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.55);
+  transform: translate(3px,3px);
 }
-.agenda-day { display: inline-block; min-width: 46px; color: #E5C158; font-weight: 600; margin-right: 6px; }
-.agenda-time { display: inline-block; min-width: 48px; color: #B5B5BA; margin-right: 6px; }
-.agenda-empty, .agenda-error { font-size: 12px; color: #9A9AA0; font-style: italic; text-align: center; display: block; border-bottom: none !important; }
+.bored-result {
+  font-size: 22px;
+  margin-top: 18px;
+  line-height: 1.4;
+  padding: 0 10px;
+  color: #FFE066;
+  min-height: 60px;
+}
 
-.deco-star { color: #C7C7CC; opacity: 0.8; }
+.deco-star { color: #FFE066; opacity: 0.9; }
 </style>
 </head>
 <body>
@@ -422,7 +454,7 @@ html, body {
 <div class="container">
 
   <div class="dashboard-columns">
-    <!-- ========================= COLONNE GAUCHE (60%) ========================= -->
+    <!-- ========================= COLONNE GAUCHE (40%) ========================= -->
     <div class="col-left">
 
       <div class="widget brand-clock">
@@ -431,32 +463,42 @@ html, body {
         <div class="clock" id="clock">--:--:--</div>
       </div>
 
-      <div class="widget weather-moon-sun">
-        <div class="weather-panel">
+      <div class="widget weather-block">
+        <div class="weather-left">
           <div class="widget-title">Météo · Paris</div>
           <div class="weather-main">
             <div class="weather-temp" id="weather-temp">--°</div>
             <div class="weather-icon" id="weather-icon">☁️</div>
           </div>
           <div class="weather-sub" id="weather-desc">Chargement…</div>
+          <div class="forecast-row" id="forecast-row"></div>
         </div>
-
-        <div class="moon-panel">
-          <div class="widget-title">Lune</div>
-          <div class="moon-main">
+        <div class="weather-right">
+          <div class="moon-panel">
+            <div class="widget-title">Lune</div>
             <div class="moon-emoji" id="moon-emoji">🌑</div>
             <div class="moon-label" id="moon-label">Calcul…</div>
           </div>
-        </div>
-
-        <div class="sun-panel">
-          <div class="widget-title">Soleil</div>
-          <div class="sun-time"><span>Lever</span><div id="sun-rise">☀️ --:--</div></div>
-          <div class="sun-time"><span>Coucher</span><div id="sun-set">🌙 --:--</div></div>
+          <div class="sun-panel">
+            <div class="widget-title">Soleil</div>
+            <div class="sun-time" id="sun-rise">☀️ --:--</div>
+            <div class="sun-time" id="sun-set">🌙 --:--</div>
+          </div>
         </div>
       </div>
 
       <div class="widget reminder" id="reminder-block"></div>
+
+      <div class="widget progress-widget">
+        <div class="widget-title">Cycle · 28 jours</div>
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="progress-bar-inner"></div>
+        </div>
+        <div class="progress-info">
+          <span class="progress-day-label" id="progress-day-label">JOUR --/28</span>
+          <span class="progress-flower" id="progress-flower" onclick="resetProgress()" title="Toucher pour réinitialiser">🌸</span>
+        </div>
+      </div>
 
       <div class="widget shopping">
         <div class="widget-title"><span class="deco-star">✦</span> Liste de courses <span class="deco-star">✦</span></div>
@@ -470,7 +512,7 @@ html, body {
 
     </div>
 
-    <!-- ========================= COLONNE DROITE (40%) ========================= -->
+    <!-- ========================= COLONNE DROITE (60%) ========================= -->
     <div class="col-right">
 
       <div class="widget audio">
@@ -486,29 +528,10 @@ html, body {
         <div class="audio-status" id="audio-status">Aucune radio en cours</div>
       </div>
 
-      <div class="widget spotify-box">
-        <div class="widget-title"><span class="deco-star">✦</span> Spotify <span class="deco-star">✦</span></div>
-        <!-- A CONFIGURER : remplacez l'ID de playlist par une playlist
-             PUBLIQUE (sinon l'iframe reste vide). Ce lecteur intégré
-             permet de lancer et contrôler la lecture directement depuis
-             le dashboard, sans quitter la page. -->
-        <iframe class="spotify-embed"
-          src="https://open.spotify.com/playlist/6hMwxixqMwsbiLBqAly1GH?si=zwbKGs_7TCeVlYey5eSYBw"
-          width="100%" height="176" frameborder="0"
-          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-          loading="eager"></iframe>
-      </div>
-
-      <div class="widget transport">
-        <div class="widget-title">Métro · Ligne 2 · Philippe Auguste</div>
-        <div id="ratp-content">
-          <div class="metro-error">Chargement des horaires…</div>
-        </div>
-      </div>
-
-      <div class="widget agenda">
-        <div class="widget-title"><span class="deco-star">✦</span> Agenda <span class="deco-star">✦</span></div>
-        <ul id="agenda-list"><li class="agenda-empty">Chargement…</li></ul>
+      <div class="widget bored">
+        <div class="widget-title"><span class="deco-star">✦</span> Petit creux d'inspiration <span class="deco-star">✦</span></div>
+        <button class="btn-pixel" onclick="showActivity()">JE M'ENNUIE</button>
+        <div class="bored-result" id="bored-result">Touche le bouton pour une idée !</div>
       </div>
 
     </div>
@@ -562,31 +585,6 @@ function xhrGetJSON(url, onSuccess, onError) {
   xhr.send();
 }
 
-// Variante qui récupère du texte brut (pas du JSON) : utilisée pour le
-// flux .ics de l'agenda.
-function xhrGetText(url, onSuccess, onError) {
-  var xhr = new XMLHttpRequest();
-  xhr.open("GET", url, true);
-  xhr.timeout = 12000;
-  xhr.onreadystatechange = function () {
-    if (xhr.readyState === 4) {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          onSuccess(xhr.responseText);
-        } catch (renderErr) {
-          if (onError) { onError(renderErr); }
-        }
-      } else {
-        if (onError) { onError(new Error("HTTP " + xhr.status)); }
-      }
-    }
-  };
-  xhr.onerror = function () {
-    if (onError) { onError(new Error("network error")); }
-  };
-  xhr.send();
-}
-
 function escapeHtml(text) {
   return String(text)
     .replace(/&/g, "&amp;")
@@ -602,18 +600,15 @@ function escapeHtml(text) {
    ---------------------------------------------------------------------- */
 function buildStars() {
   var container = document.getElementById("stars-bg");
-  var starCount = 70;
+  var starCount = 60;
   var html = "";
   var i;
   for (i = 0; i < starCount; i++) {
-    var size = Math.random() * 2 + 1;
     var top = Math.random() * 768;
     var left = Math.random() * 1024;
     var duration = (Math.random() * 3 + 2).toFixed(1);
     var delay = (Math.random() * 4).toFixed(1);
     html += '<div class="star" style="' +
-      "width:" + size + "px;" +
-      "height:" + size + "px;" +
       "top:" + top + "px;" +
       "left:" + left + "px;" +
       "animation-duration:" + duration + "s;" +
@@ -648,15 +643,7 @@ function updateClockAndDate() {
 
 /* ----------------------------------------------------------------------
    2bis. FOND DYNAMIQUE CONTINU
-   ----------------------------------------------------------------------
-   Au lieu d'un simple bascule jour/nuit, on calcule un "facteur de
-   luminosité" entre 0 et 1 : 0 avant 6h et après 18h, montant en douceur
-   (courbe en sinus) jusqu'à 1 à midi pile, puis redescendant en douceur
-   vers le soir. On interpole ensuite linéairement, canal par canal,
-   entre une couleur de nuit et une couleur de plein jour bleu clair.
    ---------------------------------------------------------------------- */
-// Palette "bleu pastel en haut / violet en bas", du plus sombre (nuit) au
-// plus clair et lumineux (plein midi).
 var NIGHT_TOP = [20, 30, 60];      // #141E3C — bleu nuit profond
 var NIGHT_BOTTOM = [25, 10, 40];   // #190A28 — violet très sombre
 var DAY_TOP = [180, 225, 250];     // #B4E1FA — bleu pastel lumineux
@@ -716,187 +703,7 @@ function checkReminder(now) {
 
 
 /* ----------------------------------------------------------------------
-   4. AGENDA — flux .ics public, parsé en ES5 (plus d'iframe)
-   ---------------------------------------------------------------------- */
-
-// A CONFIGURER : le calendrier doit être "disponible au public" dans les
-// paramètres de partage Google Calendar, sinon ce flux répond une erreur.
-var CALENDAR_ICS_URL = "https://calendar.google.com/calendar/ical/morgane.bonvin%40gmail.com/public/basic.ics";
-
-// A CONFIGURER : proxy CORS gratuit utilisé pour contourner l'absence
-// d'en-têtes CORS sur le flux .ics de Google (voir le commentaire en
-// haut du fichier). Remplacez par votre propre proxy si vous préférez
-// ne pas dépendre d'un service tiers.
-var CORS_PROXY = "https://api.allorigins.win/raw?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmorgane.bonvin%2540gmail.com%2Fpublic%2Fbasic.ics.";
-
-function unfoldICSLines(text) {
-  var rawLines = text.split(/\r\n|\n|\r/);
-  var lines = [];
-  var i;
-  for (i = 0; i < rawLines.length; i++) {
-    var line = rawLines[i];
-    if ((line.charAt(0) === " " || line.charAt(0) === "\t") && lines.length) {
-      lines[lines.length - 1] += line.substr(1);
-    } else {
-      lines.push(line);
-    }
-  }
-  return lines;
-}
-
-function splitICSProperty(line) {
-  var idx = line.indexOf(":");
-  if (idx === -1) { return null; }
-  var left = line.substr(0, idx);
-  var value = line.substr(idx + 1);
-  var nameEnd = left.indexOf(";");
-  var name = nameEnd === -1 ? left : left.substr(0, nameEnd);
-  var params = nameEnd === -1 ? "" : left.substr(nameEnd + 1);
-  return { name: name.toUpperCase(), params: params, value: value };
-}
-
-function unescapeICSText(v) {
-  return String(v)
-    .replace(/\\n/gi, " ")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\\\/g, "\\");
-}
-
-function parseICSDateValue(params, value) {
-  var digits = value.replace(/[^0-9TZ]/g, "");
-  var isDateOnly = params.indexOf("VALUE=DATE") !== -1 && digits.indexOf("T") === -1;
-  var y = parseInt(digits.substr(0, 4), 10);
-  var mo = parseInt(digits.substr(4, 2), 10);
-  var d = parseInt(digits.substr(6, 2), 10);
-
-  if (isDateOnly) {
-    return { date: new Date(y, mo - 1, d), allDay: true };
-  }
-
-  var h = parseInt(digits.substr(9, 2), 10) || 0;
-  var mi = parseInt(digits.substr(11, 2), 10) || 0;
-  var s = parseInt(digits.substr(13, 2), 10) || 0;
-  var isUTC = digits.charAt(digits.length - 1) === "Z";
-  var dt;
-  if (isUTC) {
-    dt = new Date(Date.UTC(y, mo - 1, d, h, mi, s));
-  } else {
-    dt = new Date(y, mo - 1, d, h, mi, s);
-  }
-  return { date: dt, allDay: false };
-}
-
-// Parseur .ics volontairement simple : extrait SUMMARY/DTSTART/DTEND de
-// chaque VEVENT. Les événements récurrents (RRULE) ne sont PAS développés
-// en plusieurs occurrences (limitation assumée, voir commentaire en haut
-// du fichier).
-function parseICS(text) {
-  var lines = unfoldICSLines(text);
-  var events = [];
-  var current = null;
-  var i;
-
-  for (i = 0; i < lines.length; i++) {
-    var line = lines[i];
-
-    if (line === "BEGIN:VEVENT") {
-      current = {};
-      continue;
-    }
-    if (line === "END:VEVENT") {
-      if (current && current.start) { events.push(current); }
-      current = null;
-      continue;
-    }
-    if (!current) { continue; }
-
-    var prop = splitICSProperty(line);
-    if (!prop) { continue; }
-
-    if (prop.name === "SUMMARY") {
-      current.summary = unescapeICSText(prop.value);
-    } else if (prop.name === "DTSTART") {
-      current.start = parseICSDateValue(prop.params, prop.value);
-    } else if (prop.name === "DTEND") {
-      current.end = parseICSDateValue(prop.params, prop.value);
-    }
-  }
-
-  return events;
-}
-
-function renderAgenda(icsText) {
-  var listEl = document.getElementById("agenda-list");
-  var events = parseICS(icsText);
-  var now = new Date();
-  var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-  var upcoming = [];
-  var i;
-  for (i = 0; i < events.length; i++) {
-    if (events[i].start && events[i].start.date.getTime() >= startOfToday.getTime()) {
-      upcoming.push(events[i]);
-    }
-  }
-
-  upcoming.sort(function (a, b) {
-    return a.start.date.getTime() - b.start.date.getTime();
-  });
-  upcoming = upcoming.slice(0, 12);
-
-  if (!upcoming.length) {
-    listEl.innerHTML = '<li class="agenda-empty">Aucun événement à venir</li>';
-    return;
-  }
-
-  var html = "";
-  for (i = 0; i < upcoming.length; i++) {
-    var ev = upcoming[i];
-    var d = ev.start.date;
-    var dayLabel = JOURS_ABBR[d.getDay()] + " " + d.getDate();
-    var timeLabel = ev.start.allDay ? "Journée" : (pad2(d.getHours()) + ":" + pad2(d.getMinutes()));
-    // NOTE : si le calendrier est partagé en "Voir uniquement la
-    // disponibilité", Google renvoie littéralement "Busy" à la place du
-    // vrai titre DANS LE FLUX .ICS LUI-MÊME, avant même que ce script ne
-    // le reçoive. Aucune logique de parsing ne peut donc récupérer un
-    // titre qui n'est jamais transmis — la seule vraie correction est le
-    // réglage de confidentialité du calendrier (voir l'explication
-    // fournie avec le code). On se contente ici de franciser l'affichage.
-    var rawSummary = ev.summary ? ev.summary.replace(/^\s+|\s+$/g, "") : "";
-    var summary;
-    if (!rawSummary) {
-      summary = "(Sans titre)";
-    } else if (rawSummary.toLowerCase() === "busy") {
-      summary = "Occupé <span style=\"opacity:0.5;font-size:11px;\">(détails masqués)</span>";
-    } else {
-      summary = escapeHtml(rawSummary);
-    }
-    html += '<li><span class="agenda-day">' + dayLabel + '</span>' +
-      '<span class="agenda-time">' + timeLabel + '</span>' +
-      summary + '</li>';
-  }
-  listEl.innerHTML = html;
-}
-
-function refreshAgenda() {
-  var listEl = document.getElementById("agenda-list");
-  var target = CORS_PROXY + encodeURIComponent(CALENDAR_ICS_URL);
-
-  xhrGetText(
-    target,
-    function (text) {
-      renderAgenda(text);
-    },
-    function () {
-      listEl.innerHTML = '<li class="agenda-error">Agenda indisponible pour le moment</li>';
-    }
-  );
-}
-
-
-/* ----------------------------------------------------------------------
-   5. SHOPPING LIST LOCALE (localStorage — fonctionne hors-ligne)
+   4. LISTE DE COURSES LOCALE (localStorage — fonctionne hors-ligne)
    ---------------------------------------------------------------------- */
 var SHOPPING_STORAGE_KEY = "dashboard-shopping-list";
 
@@ -986,7 +793,7 @@ function initShoppingList() {
 
 
 /* ----------------------------------------------------------------------
-   6. METEO & LUNE (Open-Meteo, aucune clé API nécessaire)
+   5. METEO, PREVISIONS 4 JOURS, LUNE & SOLEIL (Open-Meteo, sans clé API)
    ---------------------------------------------------------------------- */
 
 // A CONFIGURER si besoin : coordonnées par défaut = Paris.
@@ -1020,11 +827,31 @@ function decodeWeatherCode(code) {
   return { icon: "❓", label: "Inconnu" };
 }
 
+function renderForecast(daily) {
+  var container = document.getElementById("forecast-row");
+  if (!daily || !daily.time) { return; }
+  var count = Math.min(4, daily.time.length - 1);
+  var html = "";
+  var i;
+  for (i = 1; i <= count; i++) {
+    var d = new Date(daily.time[i] + "T00:00:00");
+    var info = decodeWeatherCode(daily.weathercode[i]);
+    var tmax = Math.round(daily.temperature_2m_max[i]);
+    var tmin = Math.round(daily.temperature_2m_min[i]);
+    html += '<div class="forecast-day">' +
+      '<div class="forecast-day-label">' + JOURS_ABBR[d.getDay()] + '</div>' +
+      '<div class="forecast-day-icon">' + info.icon + '</div>' +
+      '<div class="forecast-day-temp">' + tmax + '°/' + tmin + '°</div>' +
+      '</div>';
+  }
+  container.innerHTML = html;
+}
+
 function refreshWeather() {
   var url = "https://api.open-meteo.com/v1/forecast?latitude=" + WEATHER_LAT +
     "&longitude=" + WEATHER_LON +
     "&current_weather=true" +
-    "&daily=sunrise,sunset" +
+    "&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset" +
     "&timezone=Europe%2FParis";
 
   xhrGetJSON(
@@ -1038,11 +865,16 @@ function refreshWeather() {
         document.getElementById("weather-icon").innerHTML = info.icon;
         document.getElementById("weather-desc").innerHTML = info.label;
       }
-      if (data.daily && data.daily.sunrise && data.daily.sunrise[0]) {
-        var sunrise = data.daily.sunrise[0].substr(11, 5);
-        var sunset = data.daily.sunset[0].substr(11, 5);
-        document.getElementById("sun-rise").innerHTML = "☀️ " + sunrise;
-        document.getElementById("sun-set").innerHTML = "🌙 " + sunset;
+      if (data.daily) {
+        if (data.daily.sunrise && data.daily.sunrise[0]) {
+          var sunrise = data.daily.sunrise[0].substr(11, 5);
+          var sunset = data.daily.sunset[0].substr(11, 5);
+          // Libellés texte "Lever"/"Coucher" volontairement absents :
+          // seules les icônes ☀️ / 🌙 accompagnent les horaires.
+          document.getElementById("sun-rise").innerHTML = "☀️ " + sunrise;
+          document.getElementById("sun-set").innerHTML = "🌙 " + sunset;
+        }
+        renderForecast(data.daily);
       }
     },
     function () {
@@ -1076,53 +908,76 @@ function refreshMoon() {
 
 
 /* ----------------------------------------------------------------------
-   7. TRANSPORTS RATP (métro ligne 2, station Philippe Auguste)
+   6. BARRE DE PROGRESSION SUR 28 JOURS
+   ----------------------------------------------------------------------
+   Le point de départ du cycle est mémorisé dans localStorage. Toucher la
+   fleur remet ce point de départ à "aujourd'hui", ce qui remet la barre
+   à zéro.
    ---------------------------------------------------------------------- */
-var RATP_URL = "https://api-ratp.pierre-grimaud.fr/v4/schedules/metros/2/philippe+auguste/A+R";
+var PROGRESS_STORAGE_KEY = "dashboard-cycle-start";
 
-function refreshRatp() {
-  var container = document.getElementById("ratp-content");
-  container.innerHTML = '<div class="metro-error">Chargement des horaires…</div>';
+function todayDateStr() {
+  var now = new Date();
+  return now.getFullYear() + "-" + pad2(now.getMonth() + 1) + "-" + pad2(now.getDate());
+}
 
-  xhrGetJSON(
-    RATP_URL,
-    function (data) {
-      if (!data.result || !data.result.schedules || !data.result.schedules.length) {
-        container.innerHTML = '<div class="metro-error">Horaires indisponibles pour le moment</div>';
-        return;
-      }
+function parseDateStr(s) {
+  var parts = s.split("-");
+  return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+}
 
-      var schedules = data.result.schedules;
-      var groups = {};
-      var order = [];
-      var i;
+function getProgressStart() {
+  var raw = null;
+  try { raw = localStorage.getItem(PROGRESS_STORAGE_KEY); } catch (e) {}
+  if (!raw) {
+    raw = todayDateStr();
+    try { localStorage.setItem(PROGRESS_STORAGE_KEY, raw); } catch (e2) {}
+  }
+  return raw;
+}
 
-      for (i = 0; i < schedules.length; i++) {
-        var dest = schedules[i].destination || "Direction inconnue";
-        if (!groups[dest]) {
-          groups[dest] = [];
-          order.push(dest);
-        }
-        if (schedules[i].message) {
-          groups[dest].push(escapeHtml(schedules[i].message));
-        }
-      }
+function updateProgressBar() {
+  var startStr = getProgressStart();
+  var start = parseDateStr(startStr);
+  var now = new Date();
+  var todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-      var html = "";
-      for (i = 0; i < order.length; i++) {
-        var d = order[i];
-        if (!groups[d].length) { continue; }
-        html += '<div class="metro-direction"><span class="metro-line">2</span>' +
-          escapeHtml(d) + '</div>' +
-          '<div class="metro-times">' + groups[d].join(" &nbsp;•&nbsp; ") + '</div>';
-      }
+  var diffDays = Math.floor((todayOnly.getTime() - start.getTime()) / 86400000);
+  if (diffDays < 0) { diffDays = 0; }
+  var dayInCycle = (diffDays % 28) + 1;
+  var pct = Math.round((dayInCycle / 28) * 100);
 
-      container.innerHTML = html || '<div class="metro-error">Horaires indisponibles pour le moment</div>';
-    },
-    function () {
-      container.innerHTML = '<div class="metro-error">Horaires indisponibles pour le moment</div>';
-    }
-  );
+  document.getElementById("progress-bar-inner").style.width = pct + "%";
+  document.getElementById("progress-day-label").innerHTML = "JOUR " + dayInCycle + "/28";
+}
+
+function resetProgress() {
+  try { localStorage.setItem(PROGRESS_STORAGE_KEY, todayDateStr()); } catch (e) {}
+  updateProgressBar();
+}
+
+
+/* ----------------------------------------------------------------------
+   7. "JE M'ENNUIE" — TIRAGE D'UNE ACTIVITE AU HASARD
+   ---------------------------------------------------------------------- */
+var BORED_ACTIVITIES = [
+  "Ranger un endroit que je n'ai pas rangé depuis longtemps",
+  "Lire une BD",
+  "Lire 10 pages de ton livre",
+  "Faire du tri dans ses photos de téléphone",
+  "Plier le linge ou ranger mon armoire",
+  "Aller sur un article au hasard sur Wikipédia",
+  "Créer une double page de \"Junk Journal\"",
+  "Réparer ou upcycler un vêtement",
+  "Prendre un bain",
+  "Aller marcher",
+  "Faire une séance de yoga",
+  "Faire des pompes"
+];
+
+function showActivity() {
+  var idx = Math.floor(Math.random() * BORED_ACTIVITIES.length);
+  document.getElementById("bored-result").innerHTML = escapeHtml(BORED_ACTIVITIES[idx]);
 }
 
 
@@ -1244,14 +1099,9 @@ function initDashboard() {
   }, "lune");
 
   safeRun(function () {
-    refreshRatp();
-    setInterval(refreshRatp, 60000);
-  }, "RATP");
-
-  safeRun(function () {
-    refreshAgenda();
-    setInterval(refreshAgenda, 5 * 60 * 1000);
-  }, "agenda");
+    updateProgressBar();
+    setInterval(updateProgressBar, 60 * 60 * 1000);
+  }, "barre de progression");
 }
 
 document.addEventListener("DOMContentLoaded", function () {
