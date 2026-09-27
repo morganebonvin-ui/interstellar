@@ -163,7 +163,7 @@ html, body {
 .widget {
   flex: 0 0 auto;
   border: 1px solid rgba(255,255,255,0.28);
-  background: rgba(40,25,70,0.30);
+  background: rgba(40,25,70,0.16);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-radius: 10px;
@@ -288,7 +288,7 @@ html, body {
 /* RAPPELS */
 .widget.reminder {
   border-color: #F6C6E0;
-  background: rgba(70,20,55,0.35);
+  background: rgba(70,20,55,0.16);
   text-align: center;
   font-size: 17px;
   padding: 12px;
@@ -329,6 +329,7 @@ html, body {
   padding: 2px 6px;
 }
 .progress-flower:active { transform: translate(1px,1px); }
+
 
 /* SHOPPING LIST (widget flexible : absorbe l'espace restant de la colonne) */
 .widget.shopping {
@@ -456,6 +457,9 @@ html, body {
 }
 .btn-pomo {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: 'Silkscreen', monospace;
   font-size: 16px;
   width: 48px;
@@ -495,7 +499,122 @@ html, body {
   box-shadow: 0 0 0 rgba(0,0,0,0.45), 0 2px 3px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15);
 }
 
-/* JE M'ENNUIE — encart compact (de la place est prévue en dessous) */
+/* MINUTEURS : Pomodoro + minuteur de cuisine côte à côte */
+.timer-pair {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  margin-bottom: 10px;
+}
+.timer-pair .widget {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.timer-pair .widget + .widget {
+  margin-left: 10px;
+}
+.widget.kitchen-timer { text-align: center; }
+.kitchen-label {
+  font-family: 'Silkscreen', monospace;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #FFD447;
+  margin-bottom: 6px;
+}
+.kitchen-time {
+  font-family: 'Silkscreen', monospace;
+  font-size: 44px;
+  letter-spacing: 2px;
+  color: #FFFFFF;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 3px 3px 0 rgba(255,212,71,0.35);
+  margin-bottom: 12px;
+}
+.kitchen-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-kitchen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Silkscreen', monospace;
+  font-size: 14px;
+  width: 42px;
+  height: 42px;
+  background: rgba(255,255,255,0.10);
+  color: #FFD447;
+  border: 2px solid #FFFFFF;
+  border-radius: 4px;
+  margin: 0 5px;
+  -webkit-clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+  clip-path: polygon(
+    5px 0, calc(100% - 5px) 0, 100% 5px,
+    100% calc(100% - 5px), calc(100% - 5px) 100%,
+    5px 100%, 0 calc(100% - 5px), 0 5px
+  );
+  box-shadow: 0 4px 0 rgba(0,0,0,0.45), 0 6px 6px rgba(0,0,0,0.3);
+}
+.btn-kitchen-main {
+  width: 48px;
+  height: 48px;
+  font-size: 16px;
+  background: linear-gradient(180deg, #FDE3F0 0%, #F6C6E0 55%, #EFAFD4 100%);
+  color: #6B2456;
+  box-shadow: 0 5px 0 #C983AC, 0 8px 8px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.8);
+}
+.btn-kitchen:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.45), 0 2px 3px rgba(0,0,0,0.3);
+}
+.btn-kitchen-main:active {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 #C983AC, 0 2px 3px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,255,255,0.8);
+}
+
+/* PHRASE SAISONNIERE */
+.widget.seasonal {
+  text-align: center;
+  padding: 10px 14px;
+}
+.seasonal-week {
+  font-family: 'Silkscreen', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: #FFD447;
+  margin-bottom: 6px;
+}
+.seasonal-text {
+  font-size: 17px;
+  line-height: 1.25;
+  color: #FFFFFF;
+}
+
+/* ALERTE LISTE DE COURSES */
+@-webkit-keyframes shoppingAlert {
+  0%, 100% { border-color: rgba(255,255,255,0.28); box-shadow: 0 8px 24px rgba(0,0,0,0.30); }
+  50% { border-color: #FF4B55; box-shadow: 0 0 0 3px rgba(255,75,85,0.55), 0 8px 24px rgba(255,0,0,0.30); }
+}
+@keyframes shoppingAlert {
+  0%, 100% { border-color: rgba(255,255,255,0.28); box-shadow: 0 8px 24px rgba(0,0,0,0.30); }
+  50% { border-color: #FF4B55; box-shadow: 0 0 0 3px rgba(255,75,85,0.55), 0 8px 24px rgba(255,0,0,0.30); }
+}
+.widget.shopping.shopping-alert {
+  -webkit-animation: shoppingAlert 0.8s steps(2, end) infinite;
+  animation: shoppingAlert 0.8s steps(2, end) infinite;
+}
+
+/* JE M'ENNUIE — encart compact et STATIQUE : ne change jamais de taille,
+   qu'une activité soit affichée ou non (zone .bored-stage à hauteur fixe). */
 .widget.bored {
   flex: 0 0 auto;
   display: flex;
@@ -503,17 +622,25 @@ html, body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 14px 12px;
+  padding: 10px 12px;
+}
+.bored-stage {
+  width: 100%;
+  height: 78px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .btn-pixel {
   position: relative;
-  font-size: 13px;
+  font-size: 12px;
   background: linear-gradient(180deg, #FDE3F0 0%, #F6C6E0 55%, #EFAFD4 100%);
   color: #6B2456;
   border: 3px solid #FFFFFF;
   border-radius: 4px;
-  padding: 16px 22px;
-  margin-top: 4px;
+  padding: 11px 18px;
+  margin-top: 0;
   -webkit-clip-path: polygon(
     9px 0, calc(100% - 9px) 0, 100% 9px,
     100% calc(100% - 9px), calc(100% - 9px) 100%,
@@ -543,17 +670,17 @@ html, body {
 }
 .bored-result {
   display: none;
-  font-size: 20px;
-  margin-top: 4px;
-  line-height: 1.4;
-  padding: 4px 8px;
-  color: #A780FF;
+  font-size: 18px;
+  line-height: 1.25;
+  padding: 0 8px;
+  color: #FFFFFF;
+  max-width: 420px;
 }
 .bored-reset {
   display: none;
-  width: 34px;
-  height: 34px;
-  line-height: 28px;
+  width: 30px;
+  height: 30px;
+  line-height: 24px;
   background: rgba(0,0,0,0.35);
   border: 2px solid #FFFFFF;
   border-radius: 4px;
@@ -568,11 +695,11 @@ html, body {
     5px 100%, 0 calc(100% - 5px), 0 5px
   );
   font-family: 'Silkscreen', 'VT323', monospace;
-  font-size: 16px;
+  font-size: 15px;
   color: #FFD447;
   text-align: center;
   padding: 0;
-  margin-top: 12px;
+  margin-top: 6px;
   box-shadow: 0 3px 0 rgba(0,0,0,0.5), 0 6px 6px rgba(0,0,0,0.3);
   transition: transform 0.05s ease, box-shadow 0.05s ease;
 }
@@ -627,13 +754,13 @@ html, body {
       <div class="widget reminder" id="reminder-block"></div>
 
       <div class="widget progress-widget">
-        <div class="widget-title">Cycle · 28 jours</div>
+        <div class="widget-title">Cycle</div>
         <div class="progress-bar-outer">
           <div class="progress-bar-inner" id="progress-bar-inner"></div>
         </div>
         <div class="progress-info">
-          <span class="progress-day-label" id="progress-day-label">JOUR --/28</span>
-          <span class="progress-flower" id="progress-flower" onclick="resetProgress()" title="Toucher pour réinitialiser">🌸</span>
+          <span class="progress-day-label" id="progress-day-label">JOUR --</span>
+          <span class="progress-flower" id="progress-flower" onclick="handleFlowerClick()" title="Toucher 3 fois pour réinitialiser">🌸</span>
         </div>
       </div>
 
@@ -652,6 +779,11 @@ html, body {
     <!-- ========================= COLONNE DROITE (60%) ========================= -->
     <div class="col-right">
 
+      <div class="widget seasonal" id="seasonal-widget">
+        <div class="seasonal-week" id="seasonal-week">SEMAINE --/52</div>
+        <div class="seasonal-text" id="seasonal-text">Chargement de la nature… 🌿</div>
+      </div>
+
       <div class="widget audio">
         <div class="widget-title"><span class="deco-star">✦</span> Radios <span class="deco-star">✦</span></div>
         <div class="audio-buttons">
@@ -665,23 +797,41 @@ html, body {
         <div class="audio-status" id="audio-status">Aucune radio en cours</div>
       </div>
 
-      <div class="widget pomodoro">
-        <div class="widget-title"><span class="deco-star">✦</span> Pomodoro <span class="deco-star">✦</span></div>
-        <div class="pomodoro-label" id="pomodoro-label">Travail</div>
-        <div class="pomodoro-time" id="pomodoro-time">25:00</div>
-        <div class="pomodoro-dots" id="pomodoro-dots"></div>
-        <div class="pomodoro-controls">
-          <button class="btn-pomo btn-pomo-secondary" onclick="resetPomodoro()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
-          <button class="btn-pomo" id="pomodoro-startpause" onclick="togglePomodoro()" aria-label="Démarrer / Pause" title="Démarrer / Pause">▶</button>
-          <button class="btn-pomo btn-pomo-secondary" onclick="skipPomodoro()" aria-label="Passer" title="Passer à la phase suivante">⏭</button>
+      <div class="timer-pair">
+
+        <div class="widget pomodoro">
+          <div class="widget-title"><span class="deco-star">✦</span> Pomodoro <span class="deco-star">✦</span></div>
+          <div class="pomodoro-label" id="pomodoro-label">Travail</div>
+          <div class="pomodoro-time" id="pomodoro-time">25:00</div>
+          <div class="pomodoro-dots" id="pomodoro-dots"></div>
+          <div class="pomodoro-controls">
+            <button class="btn-pomo btn-pomo-secondary" onclick="resetPomodoro()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
+            <button class="btn-pomo" id="pomodoro-startpause" onclick="togglePomodoro()" aria-label="Démarrer / Pause" title="Démarrer / Pause">&gt;</button>
+            <button class="btn-pomo btn-pomo-secondary" onclick="skipPomodoro()" aria-label="Passer" title="Passer à la phase suivante">&gt;&gt;|</button>
+          </div>
         </div>
+
+        <div class="widget kitchen-timer">
+          <div class="widget-title"><span class="deco-star">✦</span> let's get cookin' <span class="deco-star">✦</span></div>
+          <div class="kitchen-label" id="kitchen-label">Minuteur</div>
+          <div class="kitchen-time" id="kitchen-time">10:00</div>
+          <div class="kitchen-controls">
+            <button class="btn-kitchen" onclick="adjustKitchenTimer(-60)" aria-label="Retirer une minute" title="−1 minute">−1</button>
+            <button class="btn-kitchen btn-kitchen-main" id="kitchen-startpause" onclick="toggleKitchenTimer()" aria-label="Démarrer / Pause" title="Démarrer / Pause">&gt;</button>
+            <button class="btn-kitchen" onclick="adjustKitchenTimer(60)" aria-label="Ajouter une minute" title="+1 minute">+1</button>
+            <button class="btn-kitchen" onclick="resetKitchenTimer()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
+          </div>
+        </div>
+
       </div>
 
       <div class="widget bored">
         <div class="widget-title"><span class="deco-star">✦</span> Petit creux d'inspiration <span class="deco-star">✦</span></div>
-        <button class="btn-pixel" id="bored-btn" onclick="showActivity()">JE M'ENNUIE</button>
-        <div class="bored-result" id="bored-result"></div>
-        <button class="bored-reset" id="bored-reset" onclick="resetBored()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
+        <div class="bored-stage">
+          <button class="btn-pixel" id="bored-btn" onclick="showActivity()">JE M'ENNUIE</button>
+          <div class="bored-result" id="bored-result"></div>
+          <button class="bored-reset" id="bored-reset" onclick="resetBored()" aria-label="Réinitialiser" title="Réinitialiser">↺</button>
+        </div>
       </div>
 
     </div>
@@ -789,6 +939,84 @@ function updateClockAndDate() {
 
   return now;
 }
+var SEASONAL_PHRASES = [
+  "Les chauves-souris entrent en léthargie au fond des abris souterrains. 🦇",
+  "Le renard roux commence sa période de reproduction et marque son territoire. 🦊",
+  "Apparition des premiers chatons sur les branches des noisetiers. 🌿",
+  "Les mésanges explorent activement les sols à la recherche de nourriture. 🐦",
+  "Premiers rejets de terre visibles en surface laissés par l'activité des taupes. 🌍",
+  "Sortie des premiers crocus et perce-neige hors de la terre froide. 🌸",
+  "Début de la migration printanière des amphibiens vers les mares de ponte. 🐸",
+  "Le rouge-gorge chante de bon matin pour délimiter son territoire. 🎶",
+  "La sève brute remonte dans les troncs des arbres à feuilles caduques. 🌳",
+  "Les anémones sylvies fleurissent timidement dans les sous-bois. 🌼",
+  "Équinoxe de printemps 20 mars — Durée égale entre le jour et la nuit. ⚖️",
+  "Arrivée des premières hirondelles de cheminée et des pouillets véloces. ✈️",
+  "Les bourgeons des hêtres et des chênes s'ouvrent sur un feuillage neuf. 🌱",
+  "Les lilas en fleurs embaument l'air tiède de la saison. 💜",
+  "Les reines bourdons recherchent un abri pour installer leur colonie. 🐝",
+  "Période active de construction des nids et de ponte chez les oiseaux forestiers. 🪺",
+  "Les prairies sauvages se couvrent d'herbes hautes et denses. 🌾",
+  "Émergence des premières libellules au bord des points d'eau. 🦋",
+  "Les jacinthes sauvages forment un tapis bleu dans les forêts. 🪻",
+  "Naissance des premiers faons de chevreuil cachés dans les herbes. 🦌",
+  "Période de nourrissage intense des oisillons par les parents. 🐦‍⬛",
+  "Apparition des premiers vers luisants dans les hautes herbes le soir. ✨",
+  "Solstice d'été 21 juin 2026 — Journée la plus longue de l'année. ☀️",
+  "Apparition et maturité des premières fraises des bois. 🍓",
+  "Les cigales débutent leur chant caractéristique en zone chaude. 🎶",
+  "Éclosion des œufs de mantes religieuses dans les herbes. 🦗",
+  "La terre sèche sous le soleil estival et la végétation ralentit. 🏜️",
+  "Pic de chaleur de l'été, la faune cherche l'ombre aux heures chaudes. 🥵",
+  "Passage de la pluie d'étoiles filantes des Perséides dans le ciel d'août. 🌠",
+  "Les mûres sauvages mûrissent sur les ronciers pour nourrir les oiseaux. 🍇",
+  "Les papillons de jour profitent des dernières grandes floraisons. 🦋",
+  "Les jeunes rapaces prennent leur autonomie et quittent le nid. 🦅",
+  "Les feuilles des marronniers commencent à prendre une teinte cuivrée. 🍂",
+  "Les rongeurs et écureuils stockent des graines et des noisettes. 🌰",
+  "Les premiers oiseaux insectivores entament leur migration vers le sud. ✈️",
+  "Équinoxe d'automne 22 septembre 2026 — Les nuits redeviennent plus longues que les jours. ⚖️",
+  "Le brame du cerf résonne à travers les massifs forestiers. 🦌",
+  "Poussée des premiers champignons d'automne sous les arbres. 🍄",
+  "Chute des glands et des faînes qui attirent la faune au sol. 🌰",
+  "Les feuilles des arbres virent au jaune, à l'ocre et au rouge. 🍁",
+  "Passage des premiers vols de grues cendrées dans le ciel. 🪿",
+  "Les arbres feuillus se préparent à entrer en repos végétatif. 🌳",
+  "Les matins humides font scintiller les toiles d'araignées couvertes de rosée. 🕸️",
+  "Les étourneaux forment de grands vols collectifs au crépuscule. 🐦",
+  "Les arbres perdent leurs dernières feuilles et laissent deviner le ciel. 🍂",
+  "L'activité des insectes se réduit fortement avec la baisse des températures. ❄️",
+  "Les pluies d'automne lessivent les sols et secouent les branches nues. 🌧️",
+  "Premières gelées blanches matinales sur les prairies. 🧊",
+  "La durée du jour atteint son minimum annuel. 🌑",
+  "Les nids d'écureuils apparaissent clairement dans les arbres dépouillés. 🐿️",
+  "Solstice d'hiver 21 décembre — Nuit la plus longue de l'année. 🌙",
+  "La nature tourne au ralenti en attendant le retour progressif de la chaleur. ❄️"
+];
+
+function getSeasonalWeek(now) {
+  var start = new Date(now.getFullYear(), 0, 1);
+  var startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  var currentDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var diffDays = Math.floor((currentDay.getTime() - startDay.getTime()) / 86400000);
+  var week = Math.floor(diffDays / 7) + 1;
+
+  /* La liste utilisateur contient exactement 52 semaines. */
+  if (week < 1) { week = 1; }
+  if (week > 52) { week = 52; }
+  return week;
+}
+
+function updateSeasonalPhrase(now) {
+  var week = getSeasonalWeek(now);
+  var weekEl = document.getElementById("seasonal-week");
+  var textEl = document.getElementById("seasonal-text");
+
+  if (weekEl) { weekEl.innerHTML = "SEMAINE " + week + "/52"; }
+  if (textEl) { textEl.innerHTML = escapeHtml(SEASONAL_PHRASES[week - 1]); }
+}
+
+
 
 
 /* ----------------------------------------------------------------------
@@ -856,6 +1084,7 @@ function checkReminder(now) {
    4. LISTE DE COURSES LOCALE (localStorage — fonctionne hors-ligne)
    ---------------------------------------------------------------------- */
 var SHOPPING_STORAGE_KEY = "dashboard-shopping-list";
+var SHOPPING_ALERT_MS = 24 * 60 * 60 * 1000;
 
 function loadShoppingItems() {
   var raw = null;
@@ -873,12 +1102,43 @@ function saveShoppingItems(items) {
   try { localStorage.setItem(SHOPPING_STORAGE_KEY, JSON.stringify(items)); } catch (e) {}
 }
 
+function hasOldShoppingItem(items, nowMs) {
+  var i;
+  for (i = 0; i < items.length; i++) {
+    if (!items[i].done && items[i].createdAt && (nowMs - items[i].createdAt > SHOPPING_ALERT_MS)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function updateShoppingAlert(items) {
+  var widget = document.querySelector(".widget.shopping");
+  if (!widget) { return; }
+  if (hasOldShoppingItem(items, new Date().getTime())) {
+    widget.className = "widget shopping shopping-alert";
+  } else {
+    widget.className = "widget shopping";
+  }
+}
+
 function renderShoppingList() {
   var listEl = document.getElementById("shop-list");
   var statusEl = document.getElementById("shopping-status");
   var items = loadShoppingItems();
   var html = "";
   var i;
+  var changed = false;
+
+  /* Migration douce : les anciens articles reçoivent une date de création
+     au premier affichage, sans casser le localStorage existant. */
+  for (i = 0; i < items.length; i++) {
+    if (!items[i].createdAt) {
+      items[i].createdAt = new Date().getTime();
+      changed = true;
+    }
+  }
+  if (changed) { saveShoppingItems(items); }
 
   if (!items.length) {
     listEl.innerHTML = '<li class="shopping-status">Aucun article</li>';
@@ -898,6 +1158,7 @@ function renderShoppingList() {
   }
 
   statusEl.innerHTML = items.length + (items.length > 1 ? " articles" : " article");
+  updateShoppingAlert(items);
 }
 
 function addItem() {
@@ -906,7 +1167,11 @@ function addItem() {
   if (!text) { input.focus(); return; }
 
   var items = loadShoppingItems();
-  items.push({ text: text, done: false });
+  items.push({
+    text: text,
+    done: false,
+    createdAt: new Date().getTime()
+  });
   saveShoppingItems(items);
   input.value = "";
   renderShoppingList();
@@ -916,7 +1181,14 @@ function addItem() {
 function toggleItem(index) {
   var items = loadShoppingItems();
   if (!items[index]) { return; }
+
   items[index].done = !items[index].done;
+
+  /* Si l'article est rouvert, son délai de 24 h repart à zéro. */
+  if (!items[index].done) {
+    items[index].createdAt = new Date().getTime();
+  }
+
   saveShoppingItems(items);
   renderShoppingList();
 }
@@ -931,6 +1203,12 @@ function deleteItem(index) {
 
 function initShoppingList() {
   renderShoppingList();
+
+  /* Vérification régulière de l'ancienneté sans recharger la page. */
+  setInterval(function () {
+    updateShoppingAlert(loadShoppingItems());
+  }, 60000);
+
   var input = document.getElementById("shop-input");
   input.onkeypress = function (event) {
     event = event || window.event;
@@ -1098,12 +1376,36 @@ function updateProgressBar() {
   var pct = Math.round((dayInCycle / 28) * 100);
 
   document.getElementById("progress-bar-inner").style.width = pct + "%";
-  document.getElementById("progress-day-label").innerHTML = "JOUR " + dayInCycle + "/28";
+  document.getElementById("progress-day-label").innerHTML = "JOUR " + dayInCycle;
 }
 
 function resetProgress() {
   try { localStorage.setItem(PROGRESS_STORAGE_KEY, todayDateStr()); } catch (e) {}
   updateProgressBar();
+}
+
+/* La fleur ne réinitialise le cycle qu'après 3 appuis consécutifs
+   rapprochés (moins de 800ms entre deux appuis), pour éviter une
+   remise à zéro accidentelle. */
+var flowerClickCount = 0;
+var flowerClickTimer = null;
+
+function handleFlowerClick() {
+  flowerClickCount++;
+
+  if (flowerClickTimer) { clearTimeout(flowerClickTimer); }
+
+  if (flowerClickCount >= 3) {
+    flowerClickCount = 0;
+    flowerClickTimer = null;
+    resetProgress();
+    return;
+  }
+
+  flowerClickTimer = setTimeout(function () {
+    flowerClickCount = 0;
+    flowerClickTimer = null;
+  }, 800);
 }
 
 
@@ -1153,6 +1455,11 @@ function resetBored() {
 var POMODORO_WORK_MIN = 25;
 var POMODORO_BREAK_MIN = 5;
 var POMODORO_LONG_BREAK_MIN = 15;
+
+/* Symboles ASCII (remplacent les emojis ▶ / ❚❚) réutilisés par le
+   Pomodoro et le minuteur de cuisine. */
+var ICON_PLAY_HTML = "&gt;";
+var ICON_PAUSE_HTML = "||";
 
 var pomodoroState = {
   mode: "work",
@@ -1262,14 +1569,14 @@ function startPomodoro() {
   ensurePomodoroAudio();
   pomodoroState.running = true;
   var btn = document.getElementById("pomodoro-startpause");
-  if (btn) { btn.innerHTML = "❚❚"; }
+  if (btn) { btn.innerHTML = ICON_PAUSE_HTML; }
   pomodoroState.intervalId = setInterval(pomodoroTick, 1000);
 }
 
 function pausePomodoro() {
   pomodoroState.running = false;
   var btn = document.getElementById("pomodoro-startpause");
-  if (btn) { btn.innerHTML = "▶"; }
+  if (btn) { btn.innerHTML = ICON_PLAY_HTML; }
   if (pomodoroState.intervalId) {
     clearInterval(pomodoroState.intervalId);
     pomodoroState.intervalId = null;
@@ -1294,6 +1601,105 @@ function resetPomodoro() {
   pomodoroState.remaining = POMODORO_WORK_MIN * 60;
   pomodoroState.cyclesCompleted = 0;
   updatePomodoroDisplay();
+}
+
+
+/* ----------------------------------------------------------------------
+   8. MINUTEUR DE CUISINE — "let's get cookin'"
+   ---------------------------------------------------------------------- */
+var KITCHEN_DEFAULT_MIN = 10;
+
+var kitchenState = {
+  remaining: KITCHEN_DEFAULT_MIN * 60,
+  running: false,
+  intervalId: null
+};
+
+function formatKitchenTime(totalSeconds) {
+  var m = Math.floor(totalSeconds / 60);
+  var s = totalSeconds % 60;
+  return pad2(m) + ":" + pad2(s);
+}
+
+function updateKitchenDisplay() {
+  var timeEl = document.getElementById("kitchen-time");
+  var btn = document.getElementById("kitchen-startpause");
+  if (timeEl) { timeEl.innerHTML = formatKitchenTime(kitchenState.remaining); }
+  if (btn) { btn.innerHTML = kitchenState.running ? ICON_PAUSE_HTML : ICON_PLAY_HTML; }
+}
+
+function kitchenAlarm() {
+  ensurePomodoroAudio();
+  if (!pomodoroAudioCtx) { return; }
+  playPomodoroBeep(pomodoroAudioCtx, 0, 784);
+  playPomodoroBeep(pomodoroAudioCtx, 0.45, 988);
+  playPomodoroBeep(pomodoroAudioCtx, 0.9, 1319);
+  playPomodoroBeep(pomodoroAudioCtx, 1.35, 988);
+}
+
+function kitchenTick() {
+  if (kitchenState.remaining > 0) {
+    kitchenState.remaining--;
+  }
+
+  if (kitchenState.remaining <= 0) {
+    kitchenState.remaining = 0;
+    kitchenState.running = false;
+    if (kitchenState.intervalId) {
+      clearInterval(kitchenState.intervalId);
+      kitchenState.intervalId = null;
+    }
+    kitchenAlarm();
+  }
+
+  updateKitchenDisplay();
+}
+
+function startKitchenTimer() {
+  if (kitchenState.running || kitchenState.remaining <= 0) { return; }
+  ensurePomodoroAudio();
+  kitchenState.running = true;
+  updateKitchenDisplay();
+  kitchenState.intervalId = setInterval(kitchenTick, 1000);
+}
+
+function pauseKitchenTimer() {
+  kitchenState.running = false;
+  if (kitchenState.intervalId) {
+    clearInterval(kitchenState.intervalId);
+    kitchenState.intervalId = null;
+  }
+  updateKitchenDisplay();
+}
+
+function toggleKitchenTimer() {
+  if (kitchenState.running) {
+    pauseKitchenTimer();
+  } else {
+    startKitchenTimer();
+  }
+}
+
+function adjustKitchenTimer(seconds) {
+  var wasRunning = kitchenState.running;
+  pauseKitchenTimer();
+
+  kitchenState.remaining += seconds;
+  if (kitchenState.remaining < 0) { kitchenState.remaining = 0; }
+  if (kitchenState.remaining > 99 * 60 + 59) {
+    kitchenState.remaining = 99 * 60 + 59;
+  }
+
+  updateKitchenDisplay();
+  if (wasRunning && kitchenState.remaining > 0) {
+    startKitchenTimer();
+  }
+}
+
+function resetKitchenTimer() {
+  pauseKitchenTimer();
+  kitchenState.remaining = KITCHEN_DEFAULT_MIN * 60;
+  updateKitchenDisplay();
 }
 
 
@@ -1389,11 +1795,13 @@ function initDashboard() {
   safeRun(function () {
     var now = updateClockAndDate();
     checkReminder(now);
+    updateSeasonalPhrase(now);
     setInterval(function () {
       var n = updateClockAndDate();
       checkReminder(n);
+      updateSeasonalPhrase(n);
     }, 1000);
-  }, "horloge");
+  }, "horloge + phrase saisonnière");
 
   safeRun(function () {
     updateBackground();
@@ -1421,7 +1829,8 @@ function initDashboard() {
 
   safeRun(function () {
     updatePomodoroDisplay();
-  }, "pomodoro");
+    updateKitchenDisplay();
+  }, "minuteurs");
 }
 
 document.addEventListener("DOMContentLoaded", function () {
